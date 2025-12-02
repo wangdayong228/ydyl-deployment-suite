@@ -17,7 +17,7 @@ export GEN_ACCOUNTS_PRIVATE_KEY=$(openssl rand -hex 32)
 
 cd cdk-work && ./deploy.sh cdk-gen
 # 2. 为 zk-claim-service 生成.env文件
-cd cdk-work && ./scripts/gen-zk-claim-service-env.sh $L1_RPC_URL
+cd cdk-work && ./scripts/gen-zk-claim-service-env.sh $L1_RPC_URL $ZK_CLAIM_SERVICE_PRIVATE_KEY
 # 3. 部署 counter 合约并注册 bridge 到 L1 中继合约
 cd zk-claim-service && node ./scripts/i_deployCounterAndRegisterBridge.js
 # 4. 启动 zk-claim-service 服务
