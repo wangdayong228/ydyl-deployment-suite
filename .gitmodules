@@ -1,15 +1,15 @@
 [submodule "cdk-work"]
 	path = cdk-work
-	url = https://github.com/wangdayong228/cdk-work.git
+	url = git@github.com:wangdayong228/cdk-work.git
 [submodule "op-work"]
 	path = op-work
-	url = https://github.com/wangdayong228/op-work.git
+	url = git@github.com:wangdayong228/op-work.git
 [submodule "zk-claim-service"]
 	path = zk-claim-service
-	url = https://github.com/0x3d4fb1cf/yidaiyilu-contracts.git
+	url = git@github.com:0x3d4fb1cf/yidaiyilu-contracts.git
 [submodule "op-claim-service"]
 	path = op-claim-service
-	url = https://github.com/0x3d4fb1cf/yidaiyilu-opBridgingAutomation.git
+	url = git@github.com:0x3d4fb1cf/yidaiyilu-opBridgingAutomation.git
 [submodule "ydyl-gen-accounts"]
 	path = ydyl-gen-accounts
-	url = https://github.com/wangdayong228/ydyl-gen-accounts.git
+	url = git@github.com:wangdayong228/ydyl-gen-accounts.git
