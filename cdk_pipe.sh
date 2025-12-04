@@ -57,8 +57,9 @@ else
 fi
 
 # 3. 为 zk-claim-service 生成.env文件
-echo "🔹 STEP3: 为 zk-claim-service 生成.env文件"
+echo "🔹 STEP3: 为 zk-claim-service 生成 .env 文件并复制到 zk-claim-service 目录下"
 cd $DIR/cdk-work && ./scripts/gen-zk-claim-service-env.sh $ENCLAVE_NAME
+cp $DIR/cdk-work/output/zk-claim-service.env $DIR/zk-claim-service/.env
 
 # 4. 部署 counter 合约并注册 bridge 到 L1 中继合约
 echo "🔹 STEP4: 部署 counter 合约并注册 bridge 到 L1 中继合约"
@@ -69,7 +70,6 @@ node ./scripts/i_deployCounterAndRegisterBridge.js
 
 # 5. 启动 zk-claim-service 服务
 echo "🔹 STEP5: 启动 zk-claim-service 服务"
-cp $DIR/cdk-work/output/zk-claim-service.env $DIR/zk-claim-service/.env
 cd $DIR/zk-claim-service && yarn && yarn run start
 
 # 6. 运行 ydyl-gen-accounts 脚本生成账户
@@ -89,5 +89,9 @@ npm run start
 
 # 7. 收集元数据、保存到文件，供外部查询
 echo "🔹 STEP7: 收集元数据、保存到文件，供外部查询"
+METADATA_FILE=$DIR/output/$ENCLAVE_NAME-meta.json
 export L2_VAULT_PRIVATE_KEY=$L2_VAULT_PRIVATE_KEY
-jq -n 'env | {L1_VAULT_PRIVATE_KEY, L2_VAULT_PRIVATE_KEY, L1_PREALLOCATED_MNEMONIC, ZK_CLAIM_SERVICE_PRIVATE_KEY, GEN_ACCOUNTS_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL}' > $DIR/output/$ENCLAVE_NAME-meta.json
+jq -n 'env | {L1_VAULT_PRIVATE_KEY, L2_VAULT_PRIVATE_KEY, L1_PREALLOCATED_MNEMONIC, ZK_CLAIM_SERVICE_PRIVATE_KEY, GEN_ACCOUNTS_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL}' > $METADATA_FILE
+echo "文件已保存到 $METADATA_FILE"
+
+echo "🔹 所有步骤完成"
