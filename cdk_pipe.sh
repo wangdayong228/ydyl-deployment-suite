@@ -1,6 +1,6 @@
 #!/bin/bash
 set -xEueo pipefail
-trap 'echo "命令失败: 行 $LINENO"; exit 1' ERR
+trap 'echo "🔴 cdk_pipe.sh 执行失败: 行 $LINENO, 错误信息: $BASH_COMMAND"; exit 1' ERR
 
 # 必须有环境变量 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY
 if [ -z "$L2_CHAIN_ID" ] || [ -z "$L1_CHAIN_ID" ] || [ -z "$L1_RPC_URL" ] || [ -z "$L1_VAULT_PRIVATE_KEY" ]; then
