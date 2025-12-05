@@ -27,6 +27,7 @@ command -v jq >/dev/null 2>&1 || { echo "未找到 jq"; exit 1; }
 export L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
 export ZK_CLAIM_SERVICE_PRIVATE_KEY="0x$(openssl rand -hex 32)"
 export GEN_ACCOUNTS_PRIVATE_KEY="0x$(openssl rand -hex 32)"
+GEN_ACCOUNTS_ADDRESS=$(cast wallet address --private-key $GEN_ACCOUNTS_PRIVATE_KEY)
 
 # 1. 从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH 给 L1_PREALLOCATED_MNEMONIC 和 ZK_CLAIM_SERVICE_PRIVATE_KEY
 echo "🔹 STEP1: 从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH 给 L1_PREALLOCATED_MNEMONIC 和 ZK_CLAIM_SERVICE_PRIVATE_KEY"
@@ -53,7 +54,7 @@ if [ $DRYRUN == "true" ]; then
   echo "🔹 DRYRUN 模式: 转账 L2 ETH 给 GEN_ACCOUNTS_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
 else
   echo "🔹 实际转账 L2 ETH 给 GEN_ACCOUNTS_PRIVATE_KEY"
-  cast send --legacy --rpc-url $L2_RPC_URL --private-key $GEN_ACCOUNTS_PRIVATE_KEY --value 100ether $L2_VAULT_ADDRESS
+  cast send --legacy --rpc-url $L2_RPC_URL --private-key $L2_VAULT_PRIVATE_KEY --value 100ether $GEN_ACCOUNTS_ADDRESS
 fi
 
 # 3. 为 zk-claim-service 生成.env文件
