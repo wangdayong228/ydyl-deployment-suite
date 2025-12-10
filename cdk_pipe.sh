@@ -25,6 +25,9 @@ mkdir -p $DIR/output
 command -v cast >/dev/null 2>&1 || { echo "未找到 cast"; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "未找到 jq"; exit 1; }
 command -v pm2 >/dev/null 2>&1 || { echo "未找到 pm2"; exit 1; }
+command -v polycli >/dev/null 2>&1 || { echo "未找到 polycli"; exit 1; }
+command -v awk >/dev/null 2>&1 || { echo "未找到 awk"; exit 1; }
+command -v envsubst >/dev/null 2>&1 || { echo "未找到 envsubst"; exit 1; }
 
 # 1. 部署 cdk 链、提取合约地址、设置 nginx
 # L2_CHAIN_ID=20001 L1_CHAIN_ID=3151908 L1_RPC_URL=https://eth.yidaiyilu0.site/rpc L1_PREALLOCATED_MNEMONIC="praise library enforce wagon picnic kiss estate duck nephew strong seat autumn" 

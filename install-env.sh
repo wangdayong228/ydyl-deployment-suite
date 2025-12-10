@@ -31,3 +31,8 @@ export NVM_DIR="$HOME/.nvm"
 
 nvm i 22 && nvm use 22
 npm install -g yarn
+npm install -g pm2
+
+sudo apt-get update
+sudo apt-get install -y jq
+
