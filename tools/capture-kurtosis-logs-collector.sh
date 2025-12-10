@@ -10,7 +10,7 @@ echo "现在可以在另一个终端里跑你的 kurtosis 命令了..."
 docker events \
   --filter 'type=container' \
   --filter 'event=start' \
-  --format '{{.ID}} {{.Name}}' | while read -r id name; do
+  --format '{{.ID}} {{.Actor.Attributes.name}}' | while read -r id name; do
     if [[ "$name" == *logs-collector* ]]; then
       ts=$(date +%Y%m%d-%H%M%S)
       outfile="$OUT_DIR/${name}_${id}_${ts}.log"
