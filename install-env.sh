@@ -36,3 +36,14 @@ npm install -g pm2
 sudo apt-get update
 sudo apt-get install -y jq
 
+# 设置 oh-my-zsh
+cd $ZSH_CUSTOM/plugins
+git clone https://github.com/zsh-users/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
+echo "请在 ~/.zshrc 文件手动设置 oh-my-zsh 插件"
+echo "plugins=("
+echo "    git"
+echo "    zsh-autosuggestions"
+echo "    z"
+echo "    zsh-syntax-highlighting"
+echo ")"
