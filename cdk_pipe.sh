@@ -267,14 +267,14 @@ step8_collect_metadata() {
 # 主执行流程
 ########################################
 
-run_step 0 "初始化身份和密钥" step0_init_identities
-run_step 1 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step1_fund_l1_accounts
-run_step 2 "部署 kurtosis cdk" step2_deploy_kurtosis_cdk
-run_step 3 "给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step3_fund_l2_accounts
-run_step 4 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step4_gen_zk_claim_env
-run_step 5 "部署 counter 合约并注册 bridge 到 L1 中继合约" step5_deploy_counter_and_register_bridge
-run_step 6 "启动 zk-claim-service 服务" step6_start_zk_claim_service
-run_step 7 "运行 ydyl-gen-accounts 脚本生成账户" step7_gen_accounts
-run_step 8 "收集元数据、保存到文件，供外部查询" step8_collect_metadata
+run_step 1 "初始化身份和密钥" step0_init_identities
+run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step1_fund_l1_accounts
+run_step 3 "部署 kurtosis cdk" step2_deploy_kurtosis_cdk
+run_step 4 "给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step3_fund_l2_accounts
+run_step 5 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step4_gen_zk_claim_env
+run_step 6 "部署 counter 合约并注册 bridge 到 L1 中继合约" step5_deploy_counter_and_register_bridge
+run_step 7 "启动 zk-claim-service 服务" step6_start_zk_claim_service
+run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step7_gen_accounts
+run_step 9 "收集元数据、保存到文件，供外部查询" step8_collect_metadata
 
 echo "🔹 所有步骤完成"
