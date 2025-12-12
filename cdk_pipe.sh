@@ -93,8 +93,8 @@ echo "🔹 STEP5: 部署 counter 合约并注册 bridge 到 L1 中继合约"
 cd "$DIR"/zk-claim-service 
 yarn
 npx hardhat compile
-node ./scripts/i_deployCounterAndRegisterBridge.js
-# TODO: 获取 counter 合约地址
+COUNTER_BRIDGE_REGISTER_RESULT_FILE="$DIR"/output/counter-bridge-register-result-$NETWORK.json
+node ./scripts/i_deployCounterAndRegisterBridge.js --out "$COUNTER_BRIDGE_REGISTER_RESULT_FILE"
 
 # 6. 启动 zk-claim-service 服务
 echo "🔹 STEP6: 启动 zk-claim-service 服务"
@@ -117,9 +117,10 @@ npm run start -- --fundAmount 5
 
 # 8. 收集元数据、保存到文件，供外部查询
 echo "🔹 STEP8: 收集元数据、保存到文件，供外部查询"
+COUNTER_CONTRACT=$(jq -r '.counter' "$COUNTER_BRIDGE_REGISTER_RESULT_FILE")
 METADATA_FILE=$DIR/output/$ENCLAVE_NAME-meta.json
-export L2_VAULT_PRIVATE_KEY
-jq -n 'env | {L1_VAULT_PRIVATE_KEY, L2_VAULT_PRIVATE_KEY, L1_PREALLOCATED_MNEMONIC, ZK_CLAIM_SERVICE_PRIVATE_KEY, L2_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL}' > "$METADATA_FILE"
+export L2_VAULT_PRIVATE_KEY, COUNTER_CONTRACT
+jq -n 'env | {L1_VAULT_PRIVATE_KEY, L2_VAULT_PRIVATE_KEY, L1_PREALLOCATED_MNEMONIC, ZK_CLAIM_SERVICE_PRIVATE_KEY, L2_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL, COUNTER_CONTRACT}' > "$METADATA_FILE"
 echo "文件已保存到 $METADATA_FILE"
 
 echo "🔹 所有步骤完成"
