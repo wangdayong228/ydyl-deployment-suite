@@ -108,9 +108,9 @@ fi
 pipeline_parse_start_step "$@"
 
 ########################################
-# STEP0: 生成助记词和关键私钥（只在缺失时生成）
+# STEP1: 生成助记词和关键私钥（只在缺失时生成）
 ########################################
-step0_init_identities() {
+step1_init_identities() {
   if [ -z "${L1_PREALLOCATED_MNEMONIC:-}" ]; then
     L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
   fi
@@ -140,9 +140,9 @@ step0_init_identities() {
 }
 
 ########################################
-# STEP1: 从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH
+# STEP2: 从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH
 ########################################
-step1_fund_l1_accounts() {
+step2_fund_l1_accounts() {
   if [ -z "${CDK_FUND_VAULT_ADDRESS:-}" ]; then
     CDK_FUND_VAULT_ADDRESS=$(cast wallet address --mnemonic "$L1_PREALLOCATED_MNEMONIC")
   fi
@@ -164,9 +164,9 @@ step1_fund_l1_accounts() {
 }
 
 ########################################
-# STEP2: 部署 kurtosis cdk
+# STEP3: 部署 kurtosis cdk
 ########################################
-step2_deploy_kurtosis_cdk() {
+step3_deploy_kurtosis_cdk() {
   cd "$DIR"/cdk-work && "$DIR"/cdk-work/scripts/deploy.sh "$ENCLAVE_NAME"
 
   if [ -z "${L2_RPC_URL:-}" ]; then
@@ -183,9 +183,9 @@ step2_deploy_kurtosis_cdk() {
 }
 
 ########################################
-# STEP3: 给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH
+# STEP4: 给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH
 ########################################
-step3_fund_l2_accounts() {
+step4_fund_l2_accounts() {
   if [ "${DRYRUN:-}" = "true" ]; then
     echo "🔹 DRYRUN 模式: 转账 L2 ETH 给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
   else
@@ -196,18 +196,18 @@ step3_fund_l2_accounts() {
 }
 
 ########################################
-# STEP4: 为 zk-claim-service 生成 .env
+# STEP5: 为 zk-claim-service 生成 .env
 ########################################
-step4_gen_zk_claim_env() {
+step5_gen_zk_claim_env() {
   cd "$DIR"/cdk-work && ./scripts/gen-zk-claim-service-env.sh "$ENCLAVE_NAME"
   cp "$DIR"/cdk-work/output/zk-claim-service.env "$DIR"/zk-claim-service/.env
   cp "$DIR"/cdk-work/output/counter-bridge-register.env "$DIR"/zk-claim-service/.env.counter-bridge-register
 }
 
 ########################################
-# STEP5: 部署 counter 合约并注册 bridge
+# STEP6: 部署 counter 合约并注册 bridge
 ########################################
-step5_deploy_counter_and_register_bridge() {
+step6_deploy_counter_and_register_bridge() {
   cd "$DIR"/zk-claim-service
   yarn
   npx hardhat compile
@@ -220,16 +220,16 @@ step5_deploy_counter_and_register_bridge() {
 }
 
 ########################################
-# STEP6: 启动 zk-claim-service 服务
+# STEP7: 启动 zk-claim-service 服务
 ########################################
-step6_start_zk_claim_service() {
+step7_start_zk_claim_service() {
   cd "$DIR"/zk-claim-service && yarn && yarn run start
 }
 
 ########################################
-# STEP7: 运行 ydyl-gen-accounts 生成账户
+# STEP8: 运行 ydyl-gen-accounts 生成账户
 ########################################
-step7_gen_accounts() {
+step8_gen_accounts() {
   cd "$DIR"/ydyl-gen-accounts
 
   echo "🔹 STEP7.1: 创建 .env 文件"
@@ -246,9 +246,9 @@ EOF
 }
 
 ########################################
-# STEP8: 收集元数据并保存
+# STEP9: 收集元数据并保存
 ########################################
-step8_collect_metadata() {
+step9_collect_metadata() {
   if [ -z "${COUNTER_BRIDGE_REGISTER_RESULT_FILE:-}" ]; then
     COUNTER_BRIDGE_REGISTER_RESULT_FILE="$DIR"/output/counter-bridge-register-result-"$NETWORK".json
   fi
@@ -267,14 +267,14 @@ step8_collect_metadata() {
 # 主执行流程
 ########################################
 
-run_step 1 "初始化身份和密钥" step0_init_identities
-run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step1_fund_l1_accounts
-run_step 3 "部署 kurtosis cdk" step2_deploy_kurtosis_cdk
-run_step 4 "给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step3_fund_l2_accounts
-run_step 5 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step4_gen_zk_claim_env
-run_step 6 "部署 counter 合约并注册 bridge 到 L1 中继合约" step5_deploy_counter_and_register_bridge
-run_step 7 "启动 zk-claim-service 服务" step6_start_zk_claim_service
-run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step7_gen_accounts
-run_step 9 "收集元数据、保存到文件，供外部查询" step8_collect_metadata
+run_step 1 "初始化身份和密钥" step1_init_identities
+run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
+run_step 3 "部署 kurtosis cdk" step3_deploy_kurtosis_cdk
+run_step 4 "给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step4_fund_l2_accounts
+run_step 5 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step5_gen_zk_claim_env
+run_step 6 "部署 counter 合约并注册 bridge 到 L1 中继合约" step6_deploy_counter_and_register_bridge
+run_step 7 "启动 zk-claim-service 服务" step7_start_zk_claim_service
+run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step8_gen_accounts
+run_step 9 "收集元数据、保存到文件，供外部查询" step9_collect_metadata
 
 echo "🔹 所有步骤完成"
