@@ -231,6 +231,9 @@ step7_start_zk_claim_service() {
 ########################################
 step8_gen_accounts() {
   cd "$DIR"/ydyl-gen-accounts
+  echo "🔹 STEP7.1: 清理旧文件"
+  npm i
+  npm run clean
 
   echo "🔹 STEP7.1: 创建 .env 文件"
   cat >.env <<EOF
@@ -238,9 +241,7 @@ PRIVATE_KEY=$L2_PRIVATE_KEY
 RPC=$L2_RPC_URL
 EOF
 
-  echo "🔹 STEP7.2: 安装依赖并运行脚本"
-  npm i
-  npm run clean
+  echo "🔹 STEP7.2: 启动生成账户服务"
   npm run build
   npm run start -- --fundAmount 5
 }
