@@ -268,7 +268,7 @@ step10_start_ydyl_console_service() {
   cd "$DIR"/ydyl-console-service
   cp config.sample.yaml config.yaml
   go build .
-  pm2 start -f ./ydyl-console-service --name ydyl-console-service
+  pm2 restart ydyl-console-service || pm2 start ./ydyl-console-service --name ydyl-console-service
   echo "ydyl-console-service 服务已启动"
 }
 
