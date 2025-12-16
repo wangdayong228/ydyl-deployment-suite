@@ -78,3 +78,34 @@ run_step() {
 }
 
 
+# 检查 PM2 进程是否有失败（status != online）
+# 用法：
+#   pm2_check_all_online              # 检查所有 namespace
+#   pm2_check_all_online my-namespace # 只检查指定 namespace
+pm2_check_all_online() {
+  local namespace="${1:-}"
+  local jq_filter='.[]'
+
+  if [ -n "$namespace" ]; then
+    jq_filter='.[] | select(.pm2_env.namespace=="'"$namespace"'")'
+  fi
+
+  # 找出所有非 online 的进程
+  local bad
+  bad=$(pm2 jlist \
+    | jq -r "$jq_filter | select(.pm2_env.status != \"online\") | \"\(.name) [ns=\(.pm2_env.namespace // \"-\")] status=\(.pm2_env.status)\"" \
+    || true)
+
+  if [ -n "$bad" ]; then
+    echo "🔴 以下 PM2 进程状态非 online："
+    echo "$bad"
+    echo "请用 'pm2 logs <name>' 查看具体错误日志。"
+    exit 1
+  fi
+
+  if [ -n "$namespace" ]; then
+    echo "🟢 namespace=$namespace 下的 PM2 进程全部 online"
+  else
+    echo "🟢 所有 PM2 进程全部 online"
+  fi
+}

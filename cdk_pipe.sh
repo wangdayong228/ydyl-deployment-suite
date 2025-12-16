@@ -274,6 +274,12 @@ step10_start_ydyl_console_service() {
   echo "ydyl-console-service 服务已启动"
 }
 
+# STEP11: 检查 PM2 进程是否有失败
+########################################
+step11_check_pm2_online() {
+  pm2_check_all_online
+}
+
 ########################################
 # 主执行流程
 ########################################
@@ -288,5 +294,6 @@ run_step 7 "启动 zk-claim-service 服务" step7_start_zk_claim_service
 run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step8_gen_accounts
 run_step 9 "收集元数据、保存到文件，供外部查询" step9_collect_metadata
 run_step 10 "启动 ydyl-console-service 服务" step10_start_ydyl_console_service
+run_step 11 "检查 PM2 进程是否有失败" step11_check_pm2_online
 
 echo "🔹 所有步骤完成"
