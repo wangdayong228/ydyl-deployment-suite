@@ -90,17 +90,26 @@ pm2_check_all_online() {
     jq_filter='.[] | select(.pm2_env.namespace=="'"$namespace"'")'
   fi
 
-  # 找出所有非 online 的进程
+  # 把 pm2 的 stderr 丢掉，避免非 JSON 干扰 jq
+  local jlist
+  if ! jlist=$(pm2 jlist --silent 2>/dev/null); then
+    echo "🔴 pm2 jlist 执行失败，可能 pm2 本身有问题"
+    return 1
+  fi
+
   local bad
-  bad=$(pm2 jlist \
-    | jq -r "$jq_filter | select(.pm2_env.status != \"online\") | \"\(.name) [ns=\(.pm2_env.namespace // \"-\")] status=\(.pm2_env.status)\"" \
-    || true)
+  if ! bad=$(printf '%s\n' "$jlist" \
+    | jq -r "$jq_filter | select(.pm2_env.status != \"online\") | \"\(.name) [ns=\(.pm2_env.namespace // \"-\")] status=\(.pm2_env.status)\""
+  ); then
+    echo "🔴 解析 pm2 jlist 输出失败（jq 报错），请单独运行 'pm2 jlist' 查看原始输出"
+    return 1
+  fi
 
   if [ -n "$bad" ]; then
     echo "🔴 以下 PM2 进程状态非 online："
     echo "$bad"
     echo "请用 'pm2 logs <name>' 查看具体错误日志。"
-    exit 1
+    return 1
   fi
 
   if [ -n "$namespace" ]; then
