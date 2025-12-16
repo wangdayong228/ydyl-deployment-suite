@@ -65,12 +65,12 @@ PERSIST_VARS=(
   # 运行过程中生成/推导的变量
   ENCLAVE_NAME
   NETWORK
-  L1_PREALLOCATED_MNEMONIC
-  ZK_CLAIM_SERVICE_PRIVATE_KEY
+  KURTOSIS_L1_PREALLOCATED_MNEMONIC
+  CLAIM_SERVICE_PRIVATE_KEY
   L2_PRIVATE_KEY
   L2_ADDRESS
   CDK_FUND_VAULT_ADDRESS
-  ZK_CLAIM_SERVICE_ADDRESS
+  CLAIM_SERVICE_ADDRESS
   L1_REGISTER_BRIDGE_ADDRESS
   L2_RPC_URL
   L2_VAULT_PRIVATE_KEY
@@ -79,7 +79,6 @@ PERSIST_VARS=(
   METADATA_FILE
   L2_COUNTER_CONTRACT
   CLAIM_SERVICE_PRIVATE_KEY
-  KURTOSIS_L1_PREALLOCATED_MNEMONIC
 )
 
 if [ -f "$STATE_FILE" ]; then
@@ -98,7 +97,7 @@ if [ -z "${L2_CHAIN_ID:-}" ] || [ -z "${L1_CHAIN_ID:-}" ] || [ -z "${L1_RPC_URL:
   echo "  L2_CHAIN_ID: L2 链的 chain id"
   echo "  L1_CHAIN_ID: L1 链的 chain id"
   echo "  L1_RPC_URL: 连接 L1 的 RPC 地址"
-  echo "  L1_VAULT_PRIVATE_KEY: L1 主资金账户，用于给 L1_PREALLOCATED_MNEMONIC 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L1 ETH"
+  echo "  L1_VAULT_PRIVATE_KEY: L1 主资金账户，用于给 KURTOSIS_L1_PREALLOCATED_MNEMONIC 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L1 ETH"
   echo "  L1_BRIDGE_RELAY_CONTRACT: L1 中继合约地址"
   echo "  L1_REGISTER_BRIDGE_PRIVATE_KEY: L1 注册 bridge 的私钥"
   exit 1
@@ -111,15 +110,15 @@ pipeline_parse_start_step "$@"
 # STEP1: 生成助记词和关键私钥（只在缺失时生成）
 ########################################
 step1_init_identities() {
-  if [ -z "${L1_PREALLOCATED_MNEMONIC:-}" ]; then
-    L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
+  if [ -z "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]; then
+    KURTOSIS_L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
   fi
-  export L1_PREALLOCATED_MNEMONIC
+  export KURTOSIS_L1_PREALLOCATED_MNEMONIC
 
-  if [ -z "${ZK_CLAIM_SERVICE_PRIVATE_KEY:-}" ]; then
-    ZK_CLAIM_SERVICE_PRIVATE_KEY="0x$(openssl rand -hex 32)"
+  if [ -z "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]; then
+    CLAIM_SERVICE_PRIVATE_KEY="0x$(openssl rand -hex 32)"
   fi
-  export ZK_CLAIM_SERVICE_PRIVATE_KEY
+  export CLAIM_SERVICE_PRIVATE_KEY
 
   if [ -z "${L2_PRIVATE_KEY:-}" ]; then
     L2_PRIVATE_KEY="0x$(openssl rand -hex 32)"
@@ -132,11 +131,11 @@ step1_init_identities() {
   export L2_ADDRESS
 
   echo "生成/加载身份："
-  echo "L1_PREALLOCATED_MNEMONIC: $L1_PREALLOCATED_MNEMONIC"
-  echo "ZK_CLAIM_SERVICE_PRIVATE_KEY: $ZK_CLAIM_SERVICE_PRIVATE_KEY"
+  echo "KURTOSIS_L1_PREALLOCATED_MNEMONIC: $KURTOSIS_L1_PREALLOCATED_MNEMONIC"
+  echo "CLAIM_SERVICE_PRIVATE_KEY: $CLAIM_SERVICE_PRIVATE_KEY"
   echo "L2_PRIVATE_KEY: $L2_PRIVATE_KEY"
   echo "L2_ADDRESS: $L2_ADDRESS"
-  echo "L2_ADDRESS 用于给 ZK_CLAIM_SERVICE_PRIVATE_KEY 部署 counter 合约 和 ydyl-gen-accounts 服务创建账户"
+  echo "L2_ADDRESS 用于给 CLAIM_SERVICE_PRIVATE_KEY 部署 counter 合约 和 ydyl-gen-accounts 服务创建账户"
 }
 
 ########################################
@@ -144,21 +143,21 @@ step1_init_identities() {
 ########################################
 step2_fund_l1_accounts() {
   if [ -z "${CDK_FUND_VAULT_ADDRESS:-}" ]; then
-    CDK_FUND_VAULT_ADDRESS=$(cast wallet address --mnemonic "$L1_PREALLOCATED_MNEMONIC")
+    CDK_FUND_VAULT_ADDRESS=$(cast wallet address --mnemonic "$KURTOSIS_L1_PREALLOCATED_MNEMONIC")
   fi
-  if [ -z "${ZK_CLAIM_SERVICE_ADDRESS:-}" ]; then
-    ZK_CLAIM_SERVICE_ADDRESS=$(cast wallet address --private-key "$ZK_CLAIM_SERVICE_PRIVATE_KEY")
+  if [ -z "${CLAIM_SERVICE_ADDRESS:-}" ]; then
+    CLAIM_SERVICE_ADDRESS=$(cast wallet address --private-key "$CLAIM_SERVICE_PRIVATE_KEY")
   fi
   if [ -z "${L1_REGISTER_BRIDGE_ADDRESS:-}" ]; then
     L1_REGISTER_BRIDGE_ADDRESS=$(cast wallet address --private-key "$L1_REGISTER_BRIDGE_PRIVATE_KEY")
   fi
 
   if [ "${DRYRUN:-}" = "true" ]; then
-    echo "🔹 DRYRUN 模式: 转账 L1 ETH 给 L1_PREALLOCATED_MNEMONIC 和 ZK_CLAIM_SERVICE_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
+    echo "🔹 DRYRUN 模式: 转账 L1 ETH 给 KURTOSIS_L1_PREALLOCATED_MNEMONIC 和 CLAIM_SERVICE_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
   else
-    echo "🔹 实际转账 L1 ETH 给 L1_PREALLOCATED_MNEMONIC 和 ZK_CLAIM_SERVICE_PRIVATE_KEY"
+    echo "🔹 实际转账 L1 ETH 给 KURTOSIS_L1_PREALLOCATED_MNEMONIC 和 CLAIM_SERVICE_PRIVATE_KEY"
     cast send --legacy --rpc-url "$L1_RPC_URL" --private-key "$L1_VAULT_PRIVATE_KEY" --value 100ether "$CDK_FUND_VAULT_ADDRESS" --rpc-timeout 60
-    cast send --legacy --rpc-url "$L1_RPC_URL" --private-key "$L1_VAULT_PRIVATE_KEY" --value 100ether "$ZK_CLAIM_SERVICE_ADDRESS" --rpc-timeout 60
+    cast send --legacy --rpc-url "$L1_RPC_URL" --private-key "$L1_VAULT_PRIVATE_KEY" --value 100ether "$CLAIM_SERVICE_ADDRESS" --rpc-timeout 60
     cast send --legacy --rpc-url "$L1_RPC_URL" --private-key "$L1_VAULT_PRIVATE_KEY" --value 10ether "$L1_REGISTER_BRIDGE_ADDRESS" --rpc-timeout 60
   fi
 }
@@ -183,15 +182,15 @@ step3_deploy_kurtosis_cdk() {
 }
 
 ########################################
-# STEP4: 给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH
+# STEP4: 给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH
 ########################################
 step4_fund_l2_accounts() {
   if [ "${DRYRUN:-}" = "true" ]; then
-    echo "🔹 DRYRUN 模式: 转账 L2 ETH 给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
+    echo "🔹 DRYRUN 模式: 转账 L2 ETH 给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
   else
-    echo "🔹 实际转账 L2 ETH 给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY"
+    echo "🔹 实际转账 L2 ETH 给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY"
     cast send --legacy --rpc-url "$L2_RPC_URL" --private-key "$L2_VAULT_PRIVATE_KEY" --value 100ether "$L2_ADDRESS" --rpc-timeout 60
-    cast send --legacy --rpc-url "$L2_RPC_URL" --private-key "$L2_VAULT_PRIVATE_KEY" --value 100ether "$ZK_CLAIM_SERVICE_ADDRESS" --rpc-timeout 60
+    cast send --legacy --rpc-url "$L2_RPC_URL" --private-key "$L2_VAULT_PRIVATE_KEY" --value 100ether "$CLAIM_SERVICE_ADDRESS" --rpc-timeout 60
   fi
 }
 
@@ -255,11 +254,9 @@ step9_collect_metadata() {
   fi
 
   L2_COUNTER_CONTRACT=$(jq -r '.counter' "$COUNTER_BRIDGE_REGISTER_RESULT_FILE")
-  CLAIM_SERVICE_PRIVATE_KEY=$ZK_CLAIM_SERVICE_PRIVATE_KEY
-  KURTOSIS_L1_PREALLOCATED_MNEMONIC=$L1_PREALLOCATED_MNEMONIC
 
   METADATA_FILE=$DIR/output/$ENCLAVE_NAME-meta.json
-  export L2_RPC_URL L2_VAULT_PRIVATE_KEY L2_COUNTER_CONTRACT CLAIM_SERVICE_PRIVATE_KEY
+  export L2_RPC_URL L2_VAULT_PRIVATE_KEY L2_COUNTER_CONTRACT
   jq -n 'env | {L1_VAULT_PRIVATE_KEY, L2_RPC_URL, L2_VAULT_PRIVATE_KEY, KURTOSIS_L1_PREALLOCATED_MNEMONIC, CLAIM_SERVICE_PRIVATE_KEY, L2_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL, L2_COUNTER_CONTRACT}' >"$METADATA_FILE"
   echo "文件已保存到 $METADATA_FILE"
 }
@@ -288,7 +285,7 @@ step11_check_pm2_online() {
 run_step 1 "初始化身份和密钥" step1_init_identities
 run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
 run_step 3 "部署 kurtosis cdk" step3_deploy_kurtosis_cdk
-run_step 4 "给 L2_PRIVATE_KEY 和 ZK_CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step4_fund_l2_accounts
+run_step 4 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step4_fund_l2_accounts
 run_step 5 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step5_gen_zk_claim_env
 run_step 6 "部署 counter 合约并注册 bridge 到 L1 中继合约" step6_deploy_counter_and_register_bridge
 run_step 7 "启动 zk-claim-service 服务" step7_start_zk_claim_service
