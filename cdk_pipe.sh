@@ -105,6 +105,11 @@ fi
 
 # 解析 START_STEP 并输出当前状态
 pipeline_parse_start_step "$@"
+# 把从 state 文件里恢复出来的关键变量导出到环境
+[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ] && export KURTOSIS_L1_PREALLOCATED_MNEMONIC
+[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ] && export CLAIM_SERVICE_PRIVATE_KEY
+[ -n "${L2_PRIVATE_KEY:-}" ] && export L2_PRIVATE_KEY
+[ -n "${L2_ADDRESS:-}" ] && export L2_ADDRESS
 
 ########################################
 # STEP1: 生成助记词和关键私钥（只在缺失时生成）
