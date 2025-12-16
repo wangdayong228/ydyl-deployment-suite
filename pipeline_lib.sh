@@ -83,6 +83,7 @@ run_step() {
 #   pm2_check_all_online              # 检查所有 namespace
 #   pm2_check_all_online my-namespace # 只检查指定 namespace
 pm2_check_all_online() {
+  set +x
   local namespace="${1:-}"
   local jq_filter='.[]'
 
@@ -94,6 +95,7 @@ pm2_check_all_online() {
   local jlist
   if ! jlist=$(pm2 jlist --silent 2>/dev/null); then
     echo "🔴 pm2 jlist 执行失败，可能 pm2 本身有问题"
+    set -x
     return 1
   fi
 
@@ -102,6 +104,7 @@ pm2_check_all_online() {
     | jq -r "$jq_filter | select(.pm2_env.status != \"online\") | \"\(.name) [ns=\(.pm2_env.namespace // \"-\")] status=\(.pm2_env.status)\""
   ); then
     echo "🔴 解析 pm2 jlist 输出失败（jq 报错），请单独运行 'pm2 jlist' 查看原始输出"
+    set -x
     return 1
   fi
 
@@ -109,6 +112,7 @@ pm2_check_all_online() {
     echo "🔴 以下 PM2 进程状态非 online："
     echo "$bad"
     echo "请用 'pm2 logs <name>' 查看具体错误日志。"
+    set -x
     return 1
   fi
 
@@ -117,4 +121,5 @@ pm2_check_all_online() {
   else
     echo "🟢 所有 PM2 进程全部 online"
   fi
+  set -x
 }
