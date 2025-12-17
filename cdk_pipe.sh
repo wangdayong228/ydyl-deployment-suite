@@ -20,8 +20,6 @@ trap 'echo "🔴 cdk_pipe.sh 执行失败: 行 $LINENO, 错误信息: $BASH_COMM
 #    - 脚本启动时自动 source 该文件，实现从中间步骤续跑
 ########################################
 
-export L2_TYPE=0
-
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$DIR/output/cdk_pipe.state"
 mkdir -p "$DIR"/output
@@ -262,7 +260,8 @@ step9_collect_metadata() {
 
   METADATA_FILE=$DIR/output/$ENCLAVE_NAME-meta.json
   export L2_RPC_URL L2_VAULT_PRIVATE_KEY L2_COUNTER_CONTRACT
-  jq -n 'env | {L1_VAULT_PRIVATE_KEY, L2_RPC_URL, L2_VAULT_PRIVATE_KEY, KURTOSIS_L1_PREALLOCATED_MNEMONIC, CLAIM_SERVICE_PRIVATE_KEY, L2_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL, L2_COUNTER_CONTRACT}' >"$METADATA_FILE"
+  export L2_TYPE=0
+  jq -n 'env | { L2_TYPE, L1_VAULT_PRIVATE_KEY, L2_RPC_URL, L2_VAULT_PRIVATE_KEY, KURTOSIS_L1_PREALLOCATED_MNEMONIC, CLAIM_SERVICE_PRIVATE_KEY, L2_PRIVATE_KEY, L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL, L2_COUNTER_CONTRACT}' >"$METADATA_FILE"
   echo "文件已保存到 $METADATA_FILE"
 }
 
