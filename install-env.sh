@@ -69,6 +69,7 @@ install_pm2() {
   npm install -g pm2
 }
 
+source ~/.ydyl-env
 ensure_cmd "cast"    install_foundry
 ensure_cmd "go"      install_go
 ensure_cmd "polycli" install_polycli

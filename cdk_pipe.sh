@@ -20,6 +20,8 @@ trap 'echo "🔴 cdk_pipe.sh 执行失败: 行 $LINENO, 错误信息: $BASH_COMM
 #    - 脚本启动时自动 source 该文件，实现从中间步骤续跑
 ########################################
 
+source ~/.ydyl-env
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$DIR/output/cdk_pipe.state"
 mkdir -p "$DIR"/output
