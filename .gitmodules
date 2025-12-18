@@ -16,3 +16,6 @@
 [submodule "ydyl-console-service"]
 	path = ydyl-console-service
 	url = git@github.com:wangdayong228/ydyl-console-service.git
+[submodule "ydyl-deploy-client"]
+	path = ydyl-deploy-client
+	url = git@github.com:wangdayong228/ydyl-deploy-client.git
