@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -xeuo pipefail
+set -euo pipefail
 trap 'echo "Line $LINENO: Error: $?"' ERR
 
 ensure_cmd() {
@@ -8,7 +8,10 @@ ensure_cmd() {
   local installer="$2"
 
   if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "未安装 $cmd，开始安装"
     "$installer"
+  else
+    echo "已安装 $cmd"
   fi
 }
 
