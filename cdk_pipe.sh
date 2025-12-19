@@ -110,11 +110,17 @@ pipeline_parse_start_step "$@"
 [ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ] && export CLAIM_SERVICE_PRIVATE_KEY
 [ -n "${L2_PRIVATE_KEY:-}" ] && export L2_PRIVATE_KEY
 [ -n "${L2_ADDRESS:-}" ] && export L2_ADDRESS
+[ -n "${L2_TYPE:-}" ] && export L2_TYPE
 
 ########################################
 # STEP1: 生成助记词和关键私钥（只在缺失时生成）
 ########################################
 step1_init_identities() {
+  if [ -z "${L2_TYPE:-}" ]; then
+    L2_TYPE=0
+  fi
+  export L2_TYPE
+
   if [ -z "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]; then
     KURTOSIS_L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
   fi
