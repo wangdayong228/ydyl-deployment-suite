@@ -19,3 +19,6 @@
 [submodule "ydyl-deploy-client"]
 	path = ydyl-deploy-client
 	url = git@github.com:wangdayong228/ydyl-deploy-client.git
+[submodule "jsonrpc-proxy"]
+	path = jsonrpc-proxy
+	url = git@github.com:wangdayong228/jsonrpc-proxy.git

@@ -47,7 +47,8 @@ check_input_env_compat() {
   # 如果状态文件中没有该变量，但本次有传入，则以后以本次传入为准
   if [ -n "$orig_val" ] && [ -z "$persisted_val" ]; then
     printf -v "$name" '%s' "$orig_val"
-    export "$name"
+    # export 动态变量名（如 L1_CHAIN_ID）；使用 ${name?} 明确告诉 shellcheck 这是变量名而非字面量 "name"
+    export "${name?}"
   fi
 }
 

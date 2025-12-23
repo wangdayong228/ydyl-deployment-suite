@@ -20,37 +20,67 @@ trap 'echo "🔴 cdk_pipe.sh 执行失败: 行 $LINENO, 错误信息: $BASH_COMM
 #    - 脚本启动时自动 source 该文件，实现从中间步骤续跑
 ########################################
 
-source ~/.ydyl-env
+# 该文件为本机环境注入（不同机器路径/是否存在不一致），ShellCheck 无法在静态分析时跟随
+# shellcheck disable=SC1091
+source "$HOME/.ydyl-env"
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$DIR/output/cdk_pipe.state"
 mkdir -p "$DIR"/output
 
 # 引入通用流水线工具函数
-. "$DIR/pipeline_lib.sh"
+# shellcheck source=./pipeline_lib.sh
+source "$DIR/pipeline_lib.sh"
 
 ENCLAVE_NAME="${ENCLAVE_NAME:-cdk-gen}"
 NETWORK="${NETWORK:-${ENCLAVE_NAME#cdk-}}" # 移除 "cdk-" 前缀
 NETWORK=${NETWORK//-/_}                    # 将 "-" 替换为 "_"
+L2_RPC_URL="http://127.0.0.1/l2rpc"
 
 # 记录本次执行时用户传入的关键环境变量（用于与历史状态对比）
+# 这些 ORIG_* 变量会在 pipeline_lib.sh 的 check_input_env_compat 中通过间接变量引用读取，
+# ShellCheck 无法静态推导其用途，属于有意保留
+# shellcheck disable=SC2034
 ORIG_L1_CHAIN_ID="${L1_CHAIN_ID-}"
+# shellcheck disable=SC2034
 ORIG_L2_CHAIN_ID="${L2_CHAIN_ID-}"
+# shellcheck disable=SC2034
 ORIG_L1_RPC_URL="${L1_RPC_URL-}"
+# shellcheck disable=SC2034
 ORIG_L1_VAULT_PRIVATE_KEY="${L1_VAULT_PRIVATE_KEY-}"
+# shellcheck disable=SC2034
 ORIG_L1_BRIDGE_RELAY_CONTRACT="${L1_BRIDGE_RELAY_CONTRACT-}"
+# shellcheck disable=SC2034
 ORIG_L1_REGISTER_BRIDGE_PRIVATE_KEY="${L1_REGISTER_BRIDGE_PRIVATE_KEY-}"
 
 # 加载上次执行状态
 pipeline_load_state
 
 # 查看命令相关工具是否都存在
-command -v cast >/dev/null 2>&1 || { echo "未找到 cast"; exit 1; }
-command -v jq >/dev/null 2>&1 || { echo "未找到 jq"; exit 1; }
-command -v pm2 >/dev/null 2>&1 || { echo "未找到 pm2"; exit 1; }
-command -v polycli >/dev/null 2>&1 || { echo "未找到 polycli"; exit 1; }
-command -v awk >/dev/null 2>&1 || { echo "未找到 awk"; exit 1; }
-command -v envsubst >/dev/null 2>&1 || { echo "未找到 envsubst"; exit 1; }
+command -v cast >/dev/null 2>&1 || {
+  echo "未找到 cast"
+  exit 1
+}
+command -v jq >/dev/null 2>&1 || {
+  echo "未找到 jq"
+  exit 1
+}
+command -v pm2 >/dev/null 2>&1 || {
+  echo "未找到 pm2"
+  exit 1
+}
+command -v polycli >/dev/null 2>&1 || {
+  echo "未找到 polycli"
+  exit 1
+}
+command -v awk >/dev/null 2>&1 || {
+  echo "未找到 awk"
+  exit 1
+}
+command -v envsubst >/dev/null 2>&1 || {
+  echo "未找到 envsubst"
+  exit 1
+}
 
 # 需要持久化的环境变量白名单（每行一个，便于维护）
 PERSIST_VARS=(
@@ -174,14 +204,29 @@ step2_fund_l1_accounts() {
 }
 
 ########################################
-# STEP3: 部署 kurtosis cdk
+# STEP3: 启动 jsonrpc-proxy（L1/L2 RPC 代理）
 ########################################
-step3_deploy_kurtosis_cdk() {
-  cd "$DIR"/cdk-work && "$DIR"/cdk-work/scripts/deploy.sh "$ENCLAVE_NAME"
+step3_start_jsonrpc_proxy() {
+  cd "$DIR"/jsonrpc-proxy
+  cat >.env_cdk <<EOF
+CORRECT_BLOCK_HASH=false
+LOOP_CORRECT_BLOCK_HASH=false
+PORT=3030
+JSONRPC_URL=$L1_RPC_URL
+L2_RPC_URL=$L2_RPC_URL
+EOF
+  npm i
+  npm run start:cdk
+  L1_RPC_URL_PROXY=http://127.0.0.1:3030
+}
 
-  if [ -z "${L2_RPC_URL:-}" ]; then
-    L2_RPC_URL=http://127.0.0.1/l2rpc
-  fi
+########################################
+# STEP4: 部署 kurtosis cdk
+########################################
+step4_deploy_kurtosis_cdk() {
+  : "${L1_RPC_URL_PROXY:?L1_RPC_URL_PROXY 未设置，请先运行 STEP3 启动 jsonrpc-proxy}"
+  # 只对 deploy.sh 这一条命令临时注入 L1_RPC_URL，不污染当前 shell 的 L1_RPC_URL
+  ( cd "$DIR"/cdk-work && L1_RPC_URL="$L1_RPC_URL_PROXY" "$DIR"/cdk-work/scripts/deploy.sh "$ENCLAVE_NAME" )
 
   if [ -z "${DEPLOY_RESULT_FILE:-}" ]; then
     DEPLOY_RESULT_FILE="$DIR/cdk-work/output/deploy-result-$NETWORK.json"
@@ -193,9 +238,9 @@ step3_deploy_kurtosis_cdk() {
 }
 
 ########################################
-# STEP4: 给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH
+# STEP5: 给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH
 ########################################
-step4_fund_l2_accounts() {
+step5_fund_l2_accounts() {
   if [ "${DRYRUN:-}" = "true" ]; then
     echo "🔹 DRYRUN 模式: 转账 L2 ETH 给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY (DRYRUN 模式下不执行实际转账)"
   else
@@ -206,18 +251,18 @@ step4_fund_l2_accounts() {
 }
 
 ########################################
-# STEP5: 为 zk-claim-service 生成 .env
+# STEP6: 为 zk-claim-service 生成 .env
 ########################################
-step5_gen_zk_claim_env() {
+step6_gen_zk_claim_env() {
   cd "$DIR"/cdk-work && ./scripts/gen-zk-claim-service-env.sh "$ENCLAVE_NAME"
   cp "$DIR"/cdk-work/output/zk-claim-service.env "$DIR"/zk-claim-service/.env
   cp "$DIR"/cdk-work/output/counter-bridge-register.env "$DIR"/zk-claim-service/.env.counter-bridge-register
 }
 
 ########################################
-# STEP6: 部署 counter 合约并注册 bridge
+# STEP7: 部署 counter 合约并注册 bridge
 ########################################
-step6_deploy_counter_and_register_bridge() {
+step7_deploy_counter_and_register_bridge() {
   cd "$DIR"/zk-claim-service
   yarn
   npx hardhat compile
@@ -230,36 +275,36 @@ step6_deploy_counter_and_register_bridge() {
 }
 
 ########################################
-# STEP7: 启动 zk-claim-service 服务
+# STEP8: 启动 zk-claim-service 服务
 ########################################
-step7_start_zk_claim_service() {
+step8_start_zk_claim_service() {
   cd "$DIR"/zk-claim-service && yarn && yarn run start
 }
 
 ########################################
-# STEP8: 运行 ydyl-gen-accounts 生成账户
+# STEP9: 运行 ydyl-gen-accounts 生成账户
 ########################################
-step8_gen_accounts() {
+step9_gen_accounts() {
   cd "$DIR"/ydyl-gen-accounts
-  echo "🔹 STEP7.1: 清理旧文件"
+  echo "🔹 STEP9.1: 清理旧文件"
   npm i
   npm run clean
 
-  echo "🔹 STEP7.1: 创建 .env 文件"
+  echo "🔹 STEP9.2: 创建 .env 文件"
   cat >.env <<EOF
 PRIVATE_KEY=$L2_PRIVATE_KEY
 RPC=$L2_RPC_URL
 EOF
 
-  echo "🔹 STEP7.2: 启动生成账户服务"
+  echo "🔹 STEP9.3: 启动生成账户服务"
   npm run build
   npm run start -- --fundAmount 5
 }
 
 ########################################
-# STEP9: 收集元数据并保存
+# STEP10: 收集元数据并保存
 ########################################
-step9_collect_metadata() {
+step10_collect_metadata() {
   if [ -z "${COUNTER_BRIDGE_REGISTER_RESULT_FILE:-}" ]; then
     COUNTER_BRIDGE_REGISTER_RESULT_FILE="$DIR"/output/counter-bridge-register-result-"$NETWORK".json
   fi
@@ -274,9 +319,9 @@ step9_collect_metadata() {
 }
 
 ########################################
-# STEP10: 启动 ydyl-console-service 服务
+# STEP11: 启动 ydyl-console-service 服务
 ########################################
-step10_start_ydyl_console_service() {
+step11_start_ydyl_console_service() {
   cd "$DIR"/ydyl-console-service
   cp config.sample.yaml config.yaml
   go build .
@@ -284,9 +329,9 @@ step10_start_ydyl_console_service() {
   echo "ydyl-console-service 服务已启动"
 }
 
-# STEP11: 检查 PM2 进程是否有失败
+# STEP12: 检查 PM2 进程是否有失败
 ########################################
-step11_check_pm2_online() {
+step12_check_pm2_online() {
   pm2_check_all_online
 }
 
@@ -296,14 +341,15 @@ step11_check_pm2_online() {
 
 run_step 1 "初始化身份和密钥" step1_init_identities
 run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
-run_step 3 "部署 kurtosis cdk" step3_deploy_kurtosis_cdk
-run_step 4 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step4_fund_l2_accounts
-run_step 5 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step5_gen_zk_claim_env
-run_step 6 "部署 counter 合约并注册 bridge 到 L1 中继合约" step6_deploy_counter_and_register_bridge
-run_step 7 "启动 zk-claim-service 服务" step7_start_zk_claim_service
-run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step8_gen_accounts
-run_step 9 "收集元数据、保存到文件，供外部查询" step9_collect_metadata
-run_step 10 "启动 ydyl-console-service 服务" step10_start_ydyl_console_service
-run_step 11 "检查 PM2 进程是否有失败" step11_check_pm2_online
+run_step 3 "启动 jsonrpc-proxy（L1/L2 RPC 代理）" step3_start_jsonrpc_proxy
+run_step 4 "部署 kurtosis cdk" step4_deploy_kurtosis_cdk
+run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
+run_step 6 "为 zk-claim-service 生成 .env 和 .env.counter-bridge-register 文件" step6_gen_zk_claim_env
+run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge
+run_step 8 "启动 zk-claim-service 服务" step8_start_zk_claim_service
+run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
+run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
+run_step 11 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
+run_step 12 "检查 PM2 进程是否有失败" step12_check_pm2_online
 
 echo "🔹 所有步骤完成"
