@@ -13,6 +13,11 @@ pipeline_load_state() {
 # 保存当前步骤及持久化变量到状态文件
 save_state() {
   local step="$1"
+  # DRYRUN=false（或未显式设为 true）时，不进行状态持久化
+  if [ "${DRYRUN:-false}" = "true" ]; then
+    echo "ℹ️ DRYRUN=true，跳过状态持久化（环境变量与步骤进度不会保存）"
+    return 0
+  fi
   {
     echo "LAST_DONE_STEP=$step"
     for v in "${PERSIST_VARS[@]}"; do
