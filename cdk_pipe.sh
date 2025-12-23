@@ -217,7 +217,7 @@ L2_RPC_URL=$L2_RPC_URL
 EOF
   npm i
   npm run start:cdk
-  L1_RPC_URL_PROXY=http://127.0.0.1:3030
+  L1_RPC_URL_PROXY=http://$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}'):3030
 }
 
 ########################################
