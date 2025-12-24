@@ -2,3 +2,4 @@ output
 logs
 *.log
 .env
+.cursorrules
