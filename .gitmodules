@@ -22,3 +22,6 @@
 [submodule "jsonrpc-proxy"]
 	path = jsonrpc-proxy
 	url = git@github.com:wangdayong228/jsonrpc-proxy.git
+[submodule "ydyl-scripts-lib"]
+	path = ydyl-scripts-lib
+	url = git@github.com:wangdayong228/ydyl-scripts-lib.git
