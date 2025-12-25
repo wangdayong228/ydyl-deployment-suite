@@ -28,13 +28,22 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_FILE="$DIR/output/cdk_pipe.state"
 mkdir -p "$DIR"/output
 
-# 引入通用流水线工具函数
-# shellcheck source=./pipeline_lib.sh
-source "$DIR/pipeline_lib.sh"
+# 引入通用流水线工具函数（已迁移到 ydyl-scripts-lib）
+YDYL_SCRIPTS_LIB_DIR="${YDYL_SCRIPTS_LIB_DIR:-$DIR/ydyl-scripts-lib}"
+if [ ! -f "$YDYL_SCRIPTS_LIB_DIR/utils.sh" ] || [ ! -f "$YDYL_SCRIPTS_LIB_DIR/pipeline_lib.sh" ]; then
+  echo "错误: 未找到 ydyl-scripts-lib（utils.sh/pipeline_lib.sh）"
+  echo "请设置 YDYL_SCRIPTS_LIB_DIR 指向脚本库目录，例如: export YDYL_SCRIPTS_LIB_DIR=\"$DIR/ydyl-scripts-lib\""
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "$YDYL_SCRIPTS_LIB_DIR/utils.sh"
+# shellcheck source=/dev/null
+source "$YDYL_SCRIPTS_LIB_DIR/pipeline_lib.sh"
 
 ENCLAVE_NAME="${ENCLAVE_NAME:-cdk-gen}"
 NETWORK="${NETWORK:-${ENCLAVE_NAME#cdk-}}" # 移除 "cdk-" 前缀
 NETWORK=${NETWORK//-/_}                    # 将 "-" 替换为 "_"
+# shellcheck disable=SC2034  # 该变量会被 pipeline_steps_lib.sh 的 step3_start_jsonrpc_proxy 读取
 L2_RPC_URL="http://127.0.0.1/l2rpc"
 
 # 记录本次执行时用户传入的关键环境变量（用于与历史状态对比）
@@ -83,6 +92,7 @@ command -v envsubst >/dev/null 2>&1 || {
 }
 
 # 需要持久化的环境变量白名单（每行一个，便于维护）
+# shellcheck disable=SC2034  # 该变量会被 pipeline_lib.sh 的 save_state 间接读取
 PERSIST_VARS=(
   # 外部输入
   L1_CHAIN_ID
@@ -146,8 +156,8 @@ pipeline_parse_start_step "$@"
 ########################################
 # Steps: 从 steps lib 引入（仅定义函数，不在顶层执行）
 ########################################
-# shellcheck source=./pipeline_steps_lib.sh
-source "$DIR/pipeline_steps_lib.sh"
+# shellcheck source=/dev/null
+source "$YDYL_SCRIPTS_LIB_DIR/pipeline_steps_lib.sh"
 
 ########################################
 # 主执行流程
