@@ -54,7 +54,7 @@ init_network_vars() {
     export L2_TYPE
 }
 
-ensure_op_enclave_deploy_accounts() {
+gen_op_enclave_deploy_accounts() {
     # step2_fund_l1_accounts 要求 KURTOSIS_L1_FUND_VAULT_ADDRESS 必须已存在
     KURTOSIS_L1_VAULT_PRIVATE_KEY=$L1_VAULT_PRIVATE_KEY
     export KURTOSIS_L1_VAULT_PRIVATE_KEY
@@ -229,6 +229,7 @@ step8_start_zk_claim_service() {
 
 run_all_steps() {
     run_step 1 "初始化身份和密钥" step1_init_identities
+    gen_op_enclave_deploy_accounts
     run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
     run_step 3 "启动 jsonrpc-proxy（L1/L2 RPC 代理）" step3_start_jsonrpc_proxy
     run_step 4 "部署 kurtosis op" step4_deploy_kurtosis_op
@@ -255,7 +256,6 @@ main() {
     check_env_compat
     require_inputs
     parse_start_step_and_export_restored "$@"
-    ensure_op_enclave_deploy_accounts
     run_all_steps
 }
 
