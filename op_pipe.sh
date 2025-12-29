@@ -107,7 +107,6 @@ init_persist_vars() {
         # 运行过程中生成/推导的变量
         ENCLAVE_NAME
         NETWORK
-        L2_TYPE
         CLAIM_SERVICE_PRIVATE_KEY
         L2_PRIVATE_KEY
         L2_ADDRESS
@@ -159,11 +158,11 @@ require_inputs() {
 
 parse_start_step_and_export_restored() {
     pipeline_parse_start_step "$@"
-    [[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]] && export KURTOSIS_L1_PREALLOCATED_MNEMONIC
-    [[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]] && export CLAIM_SERVICE_PRIVATE_KEY
-    [[ -n "${L2_PRIVATE_KEY:-}" ]] && export L2_PRIVATE_KEY
-    [[ -n "${L2_ADDRESS:-}" ]] && export L2_ADDRESS
-    [[ -n "${L2_TYPE:-}" ]] && export L2_TYPE
+    if [[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]]; then export KURTOSIS_L1_PREALLOCATED_MNEMONIC; fi
+    if [[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]]; then export CLAIM_SERVICE_PRIVATE_KEY; fi
+    if [[ -n "${L2_PRIVATE_KEY:-}" ]]; then export L2_PRIVATE_KEY; fi
+    if [[ -n "${L2_ADDRESS:-}" ]]; then export L2_ADDRESS; fi
+    if [[ -n "${L2_TYPE:-}" ]]; then export L2_TYPE; fi
 }
 
 ########################################

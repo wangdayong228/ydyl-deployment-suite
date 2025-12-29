@@ -48,9 +48,12 @@ init_network_vars() {
   NETWORK="${NETWORK:-${ENCLAVE_NAME#cdk-}}" # 移除 "cdk-" 前缀
   # shellcheck disable=SC2034  # 该变量会被 pipeline_steps_lib.sh 的 step3_start_jsonrpc_proxy 读取
   L2_RPC_URL="http://127.0.0.1/l2rpc"
+
+  L2_TYPE="${L2_TYPE:-0}"
+  export L2_TYPE
 }
 
-ensure_cdk_fund_vault_address() {
+generate_cdk_fund_vault_address() {
   # step2_fund_l1_accounts 要求 KURTOSIS_L1_FUND_VAULT_ADDRESS 必须已存在
   if [[ -z "${KURTOSIS_L1_FUND_VAULT_ADDRESS:-}" ]]; then
     KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --mnemonic "$KURTOSIS_L1_PREALLOCATED_MNEMONIC")
@@ -196,11 +199,11 @@ require_inputs() {
 parse_start_step_and_export_restored() {
   pipeline_parse_start_step "$@"
   # 把从 state 文件里恢复出来的关键变量导出到环境
-  [[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]] && export KURTOSIS_L1_PREALLOCATED_MNEMONIC
-  [[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]] && export CLAIM_SERVICE_PRIVATE_KEY
-  [[ -n "${L2_PRIVATE_KEY:-}" ]] && export L2_PRIVATE_KEY
-  [[ -n "${L2_ADDRESS:-}" ]] && export L2_ADDRESS
-  [[ -n "${L2_TYPE:-}" ]] && export L2_TYPE
+  if [[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]]; then export KURTOSIS_L1_PREALLOCATED_MNEMONIC; fi
+  if [[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]]; then export CLAIM_SERVICE_PRIVATE_KEY; fi
+  if [[ -n "${L2_PRIVATE_KEY:-}" ]]; then export L2_PRIVATE_KEY; fi
+  if [[ -n "${L2_ADDRESS:-}" ]]; then export L2_ADDRESS; fi
+  if [[ -n "${L2_TYPE:-}" ]]; then export L2_TYPE; fi
 }
 
 load_steps() {
@@ -215,6 +218,7 @@ load_steps() {
 
 run_all_steps() {
   run_step 1 "初始化身份和密钥" step1_init_identities
+  generate_cdk_fund_vault_address
   run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
   run_step 3 "启动 jsonrpc-proxy（L1/L2 RPC 代理）" step3_start_jsonrpc_proxy
   run_step 4 "部署 kurtosis cdk" step4_deploy_kurtosis_cdk
@@ -241,7 +245,6 @@ main() {
   require_inputs
   parse_start_step_and_export_restored "$@"
   load_steps
-  ensure_cdk_fund_vault_address
   run_all_steps
 }
 
