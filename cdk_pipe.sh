@@ -1,6 +1,5 @@
 #!/bin/bash
 set -Eueo pipefail
-trap 'echo "🔴 cdk_pipe.sh 执行失败: 行 $LINENO, 错误信息: $BASH_COMMAND"; exit 1' ERR
 
 ########################################
 # 使用说明（简要）
@@ -33,28 +32,90 @@ init_paths() {
 load_libs() {
   # 引入通用流水线工具函数（已迁移到 ydyl-scripts-lib）
   YDYL_SCRIPTS_LIB_DIR="${YDYL_SCRIPTS_LIB_DIR:-$DIR/ydyl-scripts-lib}"
-  if [ ! -f "$YDYL_SCRIPTS_LIB_DIR/utils.sh" ] || [ ! -f "$YDYL_SCRIPTS_LIB_DIR/pipeline_lib.sh" ]; then
-    echo "错误: 未找到 ydyl-scripts-lib（utils.sh/pipeline_lib.sh）"
+  if [[ ! -f "$YDYL_SCRIPTS_LIB_DIR/utils.sh" ]] || [[ ! -f "$YDYL_SCRIPTS_LIB_DIR/pipeline_utils.sh" ]]; then
+    echo "错误: 未找到 ydyl-scripts-lib（utils.sh/pipeline_utils.sh）"
     echo "请设置 YDYL_SCRIPTS_LIB_DIR 指向脚本库目录，例如: export YDYL_SCRIPTS_LIB_DIR=\"$DIR/ydyl-scripts-lib\""
     exit 1
   fi
   # shellcheck source=./ydyl-scripts-lib/utils.sh
   source "$YDYL_SCRIPTS_LIB_DIR/utils.sh"
-  # shellcheck source=./ydyl-scripts-lib/pipeline_lib.sh
-  source "$YDYL_SCRIPTS_LIB_DIR/pipeline_lib.sh"
+  # shellcheck source=./ydyl-scripts-lib/pipeline_utils.sh
+  source "$YDYL_SCRIPTS_LIB_DIR/pipeline_utils.sh"
 }
 
 init_network_vars() {
   ENCLAVE_NAME="${ENCLAVE_NAME:-cdk-gen}"
   NETWORK="${NETWORK:-${ENCLAVE_NAME#cdk-}}" # 移除 "cdk-" 前缀
-  NETWORK=${NETWORK//-/_}                    # 将 "-" 替换为 "_"
   # shellcheck disable=SC2034  # 该变量会被 pipeline_steps_lib.sh 的 step3_start_jsonrpc_proxy 读取
   L2_RPC_URL="http://127.0.0.1/l2rpc"
 }
 
+ensure_cdk_fund_vault_address() {
+  # step2_fund_l1_accounts 要求 KURTOSIS_L1_FUND_VAULT_ADDRESS 必须已存在
+  if [[ -z "${KURTOSIS_L1_FUND_VAULT_ADDRESS:-}" ]]; then
+    KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --mnemonic "$KURTOSIS_L1_PREALLOCATED_MNEMONIC")
+    export KURTOSIS_L1_FUND_VAULT_ADDRESS
+  fi
+}
+
+########################################
+# STEP3: 启动 jsonrpc-proxy（L1/L2 RPC 代理） - CDK 专属
+########################################
+step3_start_jsonrpc_proxy() {
+  cd "$DIR"/jsonrpc-proxy || return 1
+  # shellcheck disable=SC2153 # 相关变量由调用方负责初始化与校验
+  cat >.env_cdk <<EOF
+CORRECT_BLOCK_HASH=false
+LOOP_CORRECT_BLOCK_HASH=false
+PORT=3030
+JSONRPC_URL=$L1_RPC_URL
+L2_RPC_URL=$L2_RPC_URL
+EOF
+  npm i
+  npm run start:cdk
+  L1_RPC_URL_PROXY=http://$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}'):3030
+  export L1_RPC_URL_PROXY
+}
+
+########################################
+# STEP4: 部署 kurtosis cdk - CDK 专属
+########################################
+step4_deploy_kurtosis_cdk() {
+  : "${L1_RPC_URL_PROXY:?L1_RPC_URL_PROXY 未设置，请先运行 STEP3 启动 jsonrpc-proxy}"
+  # 只对 deploy.sh 这一条命令临时注入 L1_RPC_URL，不污染当前 shell 的 L1_RPC_URL
+  pushd "$DIR/cdk-work" >/dev/null
+  YDYL_NO_TRAP=1 L1_RPC_URL="$L1_RPC_URL_PROXY" "$DIR"/cdk-work/scripts/deploy.sh "$ENCLAVE_NAME"
+  popd >/dev/null
+
+  if [[ -z "${DEPLOY_RESULT_FILE:-}" ]]; then
+    DEPLOY_RESULT_FILE="$DIR/cdk-work/output/deploy-result-$NETWORK.json"
+  fi
+
+  if [[ -z "${L2_VAULT_PRIVATE_KEY:-}" ]]; then
+    L2_VAULT_PRIVATE_KEY=$(jq -r '.zkevm_l2_admin_private_key' "$DEPLOY_RESULT_FILE")
+    export L2_VAULT_PRIVATE_KEY
+  fi
+}
+
+########################################
+# STEP6: 为 zk-claim-service 生成 .env - CDK 专属
+########################################
+step6_gen_zk_claim_env() {
+  cd "$DIR"/cdk-work && ./scripts/gen-zk-claim-service-env.sh "$ENCLAVE_NAME"
+  cp "$DIR"/cdk-work/output/zk-claim-service.env "$DIR"/zk-claim-service/.env
+  cp "$DIR"/cdk-work/output/counter-bridge-register.env "$DIR"/zk-claim-service/.env.counter-bridge-register
+}
+
+########################################
+# STEP8: 启动 zk-claim-service 服务 - CDK 专属
+########################################
+step8_start_zk_claim_service() {
+  cd "$DIR"/zk-claim-service && yarn && yarn run start
+}
+
 record_input_vars() {
   # 记录本次执行时用户传入的关键环境变量（用于与历史状态对比）
-  # 这些 INPUT_* 变量会在 pipeline_lib.sh 的 check_input_env_consistency 中通过间接变量引用读取，
+  # 这些 INPUT_* 变量会在 pipeline_utils.sh 的 check_input_env_consistency 中通过间接变量引用读取，
   # ShellCheck 无法静态推导其用途，属于有意保留
   # shellcheck disable=SC2034
   INPUT_L1_CHAIN_ID="${L1_CHAIN_ID-}"
@@ -72,12 +133,12 @@ record_input_vars() {
 
 load_state_and_check_tools() {
   pipeline_load_state
-  require_commands cast jq pm2 polycli awk envsubst ip
+  require_commands cast jq pm2 polycli awk envsubst ip npm yarn
 }
 
 init_persist_vars() {
   # 需要持久化的环境变量白名单（每行一个，便于维护）
-  # shellcheck disable=SC2034  # 该变量会被 pipeline_lib.sh 的 save_state 间接读取
+  # shellcheck disable=SC2034  # 该变量会被 pipeline_utils.sh 的 save_state 间接读取
   PERSIST_VARS=(
     # 外部输入
     L1_CHAIN_ID
@@ -94,7 +155,7 @@ init_persist_vars() {
     CLAIM_SERVICE_PRIVATE_KEY
     L2_PRIVATE_KEY
     L2_ADDRESS
-    CDK_FUND_VAULT_ADDRESS
+    KURTOSIS_L1_FUND_VAULT_ADDRESS
     CLAIM_SERVICE_ADDRESS
     L1_REGISTER_BRIDGE_ADDRESS
     L2_RPC_URL
@@ -108,7 +169,7 @@ init_persist_vars() {
 }
 
 check_env_compat() {
-  if [ -f "$STATE_FILE" ]; then
+  if [[ -f "$STATE_FILE" ]]; then
     check_input_env_consistency L1_CHAIN_ID
     check_input_env_consistency L2_CHAIN_ID
     check_input_env_consistency L1_RPC_URL
@@ -119,7 +180,7 @@ check_env_compat() {
 }
 
 require_inputs() {
-  if [ -z "${L2_CHAIN_ID:-}" ] || [ -z "${L1_CHAIN_ID:-}" ] || [ -z "${L1_RPC_URL:-}" ] || [ -z "${L1_VAULT_PRIVATE_KEY:-}" ] || [ -z "${L1_BRIDGE_RELAY_CONTRACT:-}" ] || [ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]; then
+  if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_RELAY_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
     echo "错误: 请设置 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_RELAY_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY 环境变量"
     echo "变量说明:"
     echo "  L2_CHAIN_ID: L2 链的 chain id"
@@ -135,15 +196,15 @@ require_inputs() {
 parse_start_step_and_export_restored() {
   pipeline_parse_start_step "$@"
   # 把从 state 文件里恢复出来的关键变量导出到环境
-  [ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ] && export KURTOSIS_L1_PREALLOCATED_MNEMONIC
-  [ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ] && export CLAIM_SERVICE_PRIVATE_KEY
-  [ -n "${L2_PRIVATE_KEY:-}" ] && export L2_PRIVATE_KEY
-  [ -n "${L2_ADDRESS:-}" ] && export L2_ADDRESS
-  [ -n "${L2_TYPE:-}" ] && export L2_TYPE
+  [[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]] && export KURTOSIS_L1_PREALLOCATED_MNEMONIC
+  [[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]] && export CLAIM_SERVICE_PRIVATE_KEY
+  [[ -n "${L2_PRIVATE_KEY:-}" ]] && export L2_PRIVATE_KEY
+  [[ -n "${L2_ADDRESS:-}" ]] && export L2_ADDRESS
+  [[ -n "${L2_TYPE:-}" ]] && export L2_TYPE
 }
 
 load_steps() {
-  if [ ! -f "$YDYL_SCRIPTS_LIB_DIR/pipeline_steps_lib.sh" ]; then
+  if [[ ! -f "$YDYL_SCRIPTS_LIB_DIR/pipeline_steps_lib.sh" ]]; then
     echo "错误: 未找到 ydyl-scripts-lib/pipeline_steps_lib.sh"
     exit 1
   fi
@@ -171,6 +232,7 @@ run_all_steps() {
 main() {
   init_paths
   load_libs
+  ydyl_enable_traps
   init_network_vars
   record_input_vars
   load_state_and_check_tools
@@ -179,6 +241,7 @@ main() {
   require_inputs
   parse_start_step_and_export_restored "$@"
   load_steps
+  ensure_cdk_fund_vault_address
   run_all_steps
 }
 
