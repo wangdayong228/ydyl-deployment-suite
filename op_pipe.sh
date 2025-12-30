@@ -60,7 +60,7 @@ gen_op_enclave_deploy_accounts() {
     export KURTOSIS_L1_VAULT_PRIVATE_KEY
     KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
     export KURTOSIS_L1_FUND_VAULT_ADDRESS
-    KURTOSIS_L1_PREALLOCATED_MNEMONIC=$(cast wallet new --json | jq .[0].mnemonic)
+    KURTOSIS_L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
     export KURTOSIS_L1_PREALLOCATED_MNEMONIC
 }
 
@@ -190,7 +190,7 @@ EOF
 step4_deploy_kurtosis_op() {
     : "${L1_RPC_URL_PROXY:?L1_RPC_URL_PROXY 未设置，请先运行 STEP3 启动 jsonrpc-proxy}"
     # 只对 deploy.sh 这一条命令临时注入 L1_RPC_URL，不污染当前 shell 的 L1_RPC_URL
-    YDYL_NO_TRAP=1 L1_RPC_URL="$L1_RPC_URL_PROXY" "$DIR"/op-work/scripts/deploy.sh "$ENCLAVE_NAME"
+    L1_RPC_URL="$L1_RPC_URL_PROXY" "$DIR"/op-work/scripts/deploy.sh "$ENCLAVE_NAME"
 
     local wallet_path="$DIR/op-work/output/op-deployer-configs-$ENCLAVE_NAME/wallet.json"
     require_file "$wallet_path"
@@ -221,7 +221,7 @@ step6_gen_op_claim_env() {
 ########################################
 # STEP8: 启动 op-claim-service 服务 - OP 专属
 ########################################
-step8_start_zk_claim_service() {
+step8_start_op_claim_service() {
     cd "$DIR"/op-claim-service || return 1
     npm i
     npm run start
@@ -236,7 +236,7 @@ run_all_steps() {
     run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
     run_step 6 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_op_claim_env
     run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge
-    run_step 8 "启动 op-claim-service 服务" step8_start_zk_claim_service
+    run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
     run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
     run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
     run_step 11 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
