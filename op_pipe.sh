@@ -192,7 +192,7 @@ step4_deploy_kurtosis_op() {
     # 只对 deploy.sh 这一条命令临时注入 L1_RPC_URL，不污染当前 shell 的 L1_RPC_URL
     L1_RPC_URL="$L1_RPC_URL_PROXY" "$DIR"/op-work/scripts/deploy.sh "$ENCLAVE_NAME"
 
-    local wallet_path="$DIR/op-work/output/op-deployer-configs-$ENCLAVE_NAME/wallet.json"
+    local wallet_path="$DIR/op-work/output/op-deployer-configs-$ENCLAVE_NAME/wallets.json"
     require_file "$wallet_path"
     L2_VAULT_PRIVATE_KEY=$(jq -r '.l2FaucetPrivateKey' "$wallet_path")
     if [[ -z "${L2_VAULT_PRIVATE_KEY:-}" ]] || [[ "$L2_VAULT_PRIVATE_KEY" = "null" ]]; then
