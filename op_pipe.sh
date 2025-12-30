@@ -194,7 +194,7 @@ step4_deploy_kurtosis_op() {
 
     local wallet_path="$DIR/op-work/output/op-deployer-configs-$ENCLAVE_NAME/wallets.json"
     require_file "$wallet_path"
-    L2_VAULT_PRIVATE_KEY=$(jq -r '.l2FaucetPrivateKey' "$wallet_path")
+    L2_VAULT_PRIVATE_KEY=$(jq -r ".[$L2_CHAIN_ID|tostring].l2FaucetPrivateKey" "$wallet_path")
     if [[ -z "${L2_VAULT_PRIVATE_KEY:-}" ]] || [[ "$L2_VAULT_PRIVATE_KEY" = "null" ]]; then
         echo "错误: wallet.json 缺少 l2FaucetPrivateKey: $wallet_path" >&2
         return 1
