@@ -169,6 +169,11 @@ parse_start_step_and_export_restored() {
 # STEP3: 启动 jsonrpc-proxy（L1/L2 RPC 代理） - OP 专属
 ########################################
 step3_start_jsonrpc_proxy() {
+    if [[ "${ENABLE_L1_RPC_RROXY:-}" = "true" ]]; then
+        echo "🔹 跳过启动 jsonrpc-proxy"
+        return 0
+    fi
+
     cd "$DIR"/jsonrpc-proxy || return 1
     # shellcheck disable=SC2153
     cat >.env_op <<EOF
@@ -228,6 +233,7 @@ step8_start_op_claim_service() {
 }
 
 run_all_steps() {
+    ENABLE_L1_RPC_RROXY=true
     run_step 1 "初始化身份和密钥" step1_init_identities
     gen_op_enclave_deploy_accounts
     run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
