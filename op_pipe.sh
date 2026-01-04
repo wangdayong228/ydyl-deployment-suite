@@ -170,7 +170,9 @@ parse_start_step_and_export_restored() {
 ########################################
 step3_start_jsonrpc_proxy() {
     if [[ "${ENABLE_L1_RPC_RROXY:-}" = "true" ]]; then
-        echo "🔹 跳过启动 jsonrpc-proxy"
+        echo "🔹 跳过启动 jsonrpc-proxy, 直接使用 L1_RPC_URL 作为 L1_RPC_URL_PROXY"
+        L1_RPC_URL_PROXY=$L1_RPC_URL
+        export L1_RPC_URL_PROXY
         return 0
     fi
 
