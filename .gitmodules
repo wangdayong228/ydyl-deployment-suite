@@ -25,3 +25,6 @@
 [submodule "ydyl-scripts-lib"]
 	path = ydyl-scripts-lib
 	url = git@github.com:wangdayong228/ydyl-scripts-lib.git
+[submodule "xjst-work"]
+	path = xjst-work
+	url = git@github.com:wangdayong228/xjst-work.git
