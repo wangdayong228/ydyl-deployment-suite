@@ -5,7 +5,7 @@ set -Eueo pipefail
 # 使用说明（简要）
 # 1. 必填环境变量：
 #    - L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL, L1_VAULT_PRIVATE_KEY
-#    - L1_BRIDGE_RELAY_CONTRACT, L1_REGISTER_BRIDGE_PRIVATE_KEY
+#    - L1_BRIDGE_HUB_CONTRACT, L1_REGISTER_BRIDGE_PRIVATE_KEY
 # 2. 步骤控制：
 #    - 默认：从上次完成步骤的下一步开始执行（读取 output/cdk_pipe.state）
 #    - 指定起始步骤：
@@ -129,7 +129,7 @@ record_input_vars() {
   # shellcheck disable=SC2034
   INPUT_L1_VAULT_PRIVATE_KEY="${L1_VAULT_PRIVATE_KEY-}"
   # shellcheck disable=SC2034
-  INPUT_L1_BRIDGE_RELAY_CONTRACT="${L1_BRIDGE_RELAY_CONTRACT-}"
+  INPUT_L1_BRIDGE_HUB_CONTRACT="${L1_BRIDGE_HUB_CONTRACT-}"
   # shellcheck disable=SC2034
   INPUT_L1_REGISTER_BRIDGE_PRIVATE_KEY="${L1_REGISTER_BRIDGE_PRIVATE_KEY-}"
 }
@@ -148,7 +148,7 @@ init_persist_vars() {
     L2_CHAIN_ID
     L1_RPC_URL
     L1_VAULT_PRIVATE_KEY
-    L1_BRIDGE_RELAY_CONTRACT
+    L1_BRIDGE_HUB_CONTRACT
     L1_REGISTER_BRIDGE_PRIVATE_KEY
 
     # 运行过程中生成/推导的变量
@@ -168,6 +168,9 @@ init_persist_vars() {
     METADATA_FILE
     L2_COUNTER_CONTRACT
     CLAIM_SERVICE_PRIVATE_KEY
+
+    # 流水线状态：running/success/failed
+    PIPELINE_STATUS
   )
 }
 
@@ -177,20 +180,20 @@ check_env_compat() {
     check_input_env_consistency L2_CHAIN_ID
     check_input_env_consistency L1_RPC_URL
     check_input_env_consistency L1_VAULT_PRIVATE_KEY
-    check_input_env_consistency L1_BRIDGE_RELAY_CONTRACT
+    check_input_env_consistency L1_BRIDGE_HUB_CONTRACT
     check_input_env_consistency L1_REGISTER_BRIDGE_PRIVATE_KEY
   fi
 }
 
 require_inputs() {
-  if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_RELAY_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
-    echo "错误: 请设置 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_RELAY_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY 环境变量"
+  if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
+    echo "错误: 请设置 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY 环境变量"
     echo "变量说明:"
     echo "  L2_CHAIN_ID: L2 链的 chain id"
     echo "  L1_CHAIN_ID: L1 链的 chain id"
     echo "  L1_RPC_URL: 连接 L1 的 RPC 地址"
     echo "  L1_VAULT_PRIVATE_KEY: L1 主资金账户，用于给 KURTOSIS_L1_PREALLOCATED_MNEMONIC 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L1 ETH"
-    echo "  L1_BRIDGE_RELAY_CONTRACT: L1 中继合约地址"
+    echo "  L1_BRIDGE_HUB_CONTRACT: L1 中继合约地址"
     echo "  L1_REGISTER_BRIDGE_PRIVATE_KEY: L1 注册 bridge 的私钥"
     exit 1
   fi
@@ -230,6 +233,11 @@ run_all_steps() {
   run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
   run_step 11 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
   run_step 12 "检查 PM2 进程是否有失败" step12_check_pm2_online
+
+  # shellcheck disable=SC2034  # 该变量通过 PERSIST_VARS 间接写入 state 文件
+  PIPELINE_STATUS="success"
+  # 全部完成时仅更新状态，不改变已完成步骤号
+  save_state "${LAST_DONE_STEP:-0}"
   echo "🔹 所有步骤完成"
 }
 

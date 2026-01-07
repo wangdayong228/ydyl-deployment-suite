@@ -7,7 +7,7 @@ set -Eueo pipefail
 #    - L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL
 #    - KURTOSIS_L1_PREALLOCATED_MNEMONIC
 #    - L1_VAULT_PRIVATE_KEY（或 KURTOSIS_L1_VAULT_PRIVATE_KEY 二选一）
-#    - L1_BRIDGE_RELAY_CONTRACT, L1_REGISTER_BRIDGE_PRIVATE_KEY
+#    - L1_BRIDGE_HUB_CONTRACT, L1_REGISTER_BRIDGE_PRIVATE_KEY
 #    - KURTOSIS_L1_FUND_VAULT_ADDRESS（OP 版：必须由用户/上层提供）
 # 2. 步骤控制：
 #    - 默认：从上次完成步骤的下一步开始执行（读取 output/op_pipe.state）
@@ -80,7 +80,7 @@ record_input_vars() {
     # shellcheck disable=SC2034
     INPUT_KURTOSIS_L1_FUND_VAULT_ADDRESS="${KURTOSIS_L1_FUND_VAULT_ADDRESS-}"
     # shellcheck disable=SC2034
-    INPUT_L1_BRIDGE_RELAY_CONTRACT="${L1_BRIDGE_RELAY_CONTRACT-}"
+    INPUT_L1_BRIDGE_HUB_CONTRACT="${L1_BRIDGE_HUB_CONTRACT-}"
     # shellcheck disable=SC2034
     INPUT_L1_REGISTER_BRIDGE_PRIVATE_KEY="${L1_REGISTER_BRIDGE_PRIVATE_KEY-}"
 }
@@ -101,7 +101,7 @@ init_persist_vars() {
         KURTOSIS_L1_VAULT_PRIVATE_KEY
         KURTOSIS_L1_PREALLOCATED_MNEMONIC
         KURTOSIS_L1_FUND_VAULT_ADDRESS
-        L1_BRIDGE_RELAY_CONTRACT
+        L1_BRIDGE_HUB_CONTRACT
         L1_REGISTER_BRIDGE_PRIVATE_KEY
 
         # 运行过程中生成/推导的变量
@@ -130,14 +130,14 @@ check_env_compat() {
         check_input_env_consistency KURTOSIS_L1_VAULT_PRIVATE_KEY
         check_input_env_consistency KURTOSIS_L1_PREALLOCATED_MNEMONIC
         check_input_env_consistency KURTOSIS_L1_FUND_VAULT_ADDRESS
-        check_input_env_consistency L1_BRIDGE_RELAY_CONTRACT
+        check_input_env_consistency L1_BRIDGE_HUB_CONTRACT
         check_input_env_consistency L1_REGISTER_BRIDGE_PRIVATE_KEY
     fi
 }
 
 require_inputs() {
-    if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_BRIDGE_RELAY_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
-        echo "错误: 请设置 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_BRIDGE_RELAY_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY"
+    if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
+        echo "错误: 请设置 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY"
         exit 1
     fi
 
