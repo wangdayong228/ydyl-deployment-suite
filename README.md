@@ -25,4 +25,10 @@ bash cdk_pipe.sh
 bash op_pipe.sh
 ```
 
+## 说明：Counter 部署与 bridgeHub 注册（step7）
+
+`cdk_pipe.sh/op_pipe.sh` 的 step7 会执行 `zk-claim-service/scripts/i_deployCounterAndRegisterBridge.js`，它读取 `zk-claim-service/.env.counter-bridge-register` 来完成：\n- 在 L2 部署 `Counter`\n- 在 L1 的 `bridgeHub` 调用 `addBridgeService` 批量注册桥合约地址
+
+其中桥地址使用 **`BRIDGES`（数组）**：\n- `.env.counter-bridge-register`：`BRIDGES=0xaaa...,0xbbb...`（逗号分隔）\n- CLI：可重复传参 `--bridges 0x... --bridges 0x...`
+
 
