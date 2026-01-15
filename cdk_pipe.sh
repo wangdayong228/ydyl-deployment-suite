@@ -3,9 +3,31 @@ set -Eueo pipefail
 
 ########################################
 # 使用说明（简要）
-# 1. 必填环境变量：
-#    - L1_CHAIN_ID, L2_CHAIN_ID, L1_RPC_URL, L1_VAULT_PRIVATE_KEY
-#    - L1_BRIDGE_HUB_CONTRACT, L1_REGISTER_BRIDGE_PRIVATE_KEY
+# 1. 必须传入（用户提供）的环境变量：
+#    - L1_CHAIN_ID: L1 链 chain id（用于部署/元数据记录/区分网络）
+#    - L2_CHAIN_ID: L2 链 chain id（用于部署/元数据记录/区分网络）
+#    - L1_RPC_URL: 连接 L1 的 RPC 地址（用于 L1 转账、以及 jsonrpc-proxy 上游）
+#    - L1_VAULT_PRIVATE_KEY: L1 主资金账户私钥（用于给部署相关账户转 L1 ETH）
+#    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用）
+#    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
+#
+# 2. 可选传入（可覆盖默认）的环境变量：
+#    - ENCLAVE_NAME: kurtosis enclave 名（默认 cdk-gen）
+#    - L2_TYPE: L2 类型编号（默认 0=zk；会传递给注册脚本）
+#    - L2_RPC_URL: L2 RPC（默认 http://127.0.0.1/l2rpc；由 kurtosis 暴露到本机）
+#    - YDYL_SCRIPTS_LIB_DIR: 脚本库路径（默认 $DIR/ydyl-scripts-lib）
+#    - DRYRUN: true 时只打印不转账/不执行链上操作（由 step 函数读取）
+#    - DEPLOY_RESULT_FILE: 部署产物路径（默认 $DIR/cdk-work/output/deploy-result-$NETWORK.json）
+#    - L2_VAULT_PRIVATE_KEY: L2 faucet/admin 私钥（默认从 DEPLOY_RESULT_FILE 解析）
+#
+# 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
+#    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1 自动生成（kurtosis 预分配账户助记词）
+#    - KURTOSIS_L1_FUND_VAULT_ADDRESS: 由助记词推导（用于 step2 接收 L1 资金）
+#    - CLAIM_SERVICE_PRIVATE_KEY: step1 自动生成（claim-service EOA）
+#    - L2_PRIVATE_KEY: step1 自动生成（用途：L2 部署 Counter、ydyl-gen-accounts 付款/部署账户）
+#    - L2_ADDRESS: 由 L2_PRIVATE_KEY 推导（用于 step5 接收 L2 充值）
+#    - L1_RPC_URL_PROXY: step3 启动 jsonrpc-proxy 后生成（用于 kurtosis deploy）
+#    - 其他产物：L2_VAULT_PRIVATE_KEY、METADATA_FILE、COUNTER_BRIDGE_REGISTER_RESULT_FILE 等在运行过程中生成/写入
 # 2. 步骤控制：
 #    - 默认：从上次完成步骤的下一步开始执行（读取 output/cdk_pipe.state）
 #    - 指定起始步骤：
@@ -156,6 +178,9 @@ init_persist_vars() {
     NETWORK
     KURTOSIS_L1_PREALLOCATED_MNEMONIC
     CLAIM_SERVICE_PRIVATE_KEY
+    # L2_PRIVATE_KEY 用途：
+    # - L2 上部署 Counter 合约（bridge 注册流程依赖）
+    # - ydyl-gen-accounts 的付款/部署账户（写入 ydyl-gen-accounts/.env 的 PRIVATE_KEY）
     L2_PRIVATE_KEY
     L2_ADDRESS
     KURTOSIS_L1_FUND_VAULT_ADDRESS
@@ -187,7 +212,7 @@ check_env_compat() {
 
 require_inputs() {
   if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
-    echo "错误: 请设置 L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY 环境变量"
+    echo "错误: 缺少必须的环境变量，请设置：L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY"
     echo "变量说明:"
     echo "  L2_CHAIN_ID: L2 链的 chain id"
     echo "  L1_CHAIN_ID: L1 链的 chain id"
@@ -204,6 +229,7 @@ parse_start_step_and_export_restored() {
   # 把从 state 文件里恢复出来的关键变量导出到环境
   if [[ -n "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]]; then export KURTOSIS_L1_PREALLOCATED_MNEMONIC; fi
   if [[ -n "${CLAIM_SERVICE_PRIVATE_KEY:-}" ]]; then export CLAIM_SERVICE_PRIVATE_KEY; fi
+  # L2_PRIVATE_KEY 用途见上方 PERSIST_VARS 注释（部署 Counter、gen-accounts 付款/部署账户）
   if [[ -n "${L2_PRIVATE_KEY:-}" ]]; then export L2_PRIVATE_KEY; fi
   if [[ -n "${L2_ADDRESS:-}" ]]; then export L2_ADDRESS; fi
   if [[ -n "${L2_TYPE:-}" ]]; then export L2_TYPE; fi
