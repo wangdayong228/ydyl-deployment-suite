@@ -4,3 +4,4 @@ logs
 .env
 .cursorrules
 .cache
+.DS_Store
