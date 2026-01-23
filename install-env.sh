@@ -83,6 +83,8 @@ ensure_cmd "pm2"     install_pm2
 
 # shellcheck disable=SC1091
 source "$HOME/.ydyl-env"
+# shellcheck disable=SC1091
+source "$HOME/.zshrc"
 
 # 设置 oh-my-zsh
 if [ -z "${ZSH_CUSTOM:-}" ]; then

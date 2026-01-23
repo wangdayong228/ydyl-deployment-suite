@@ -332,7 +332,6 @@ L1_REGISTER_BRIDGE_PRIVATE_KEY=${L1_REGISTER_BRIDGE_PRIVATE_KEY}
 L2_PRIVATE_KEY=${L2_PRIVATE_KEY}
 L2_TYPE=${L2_TYPE}
 " >"$DIR"/zk-claim-service/.env.counter-bridge-register
-
 	echo "🔹 counter-bridge-register.env 文件已保存到 $DIR/zk-claim-service/.env.counter-bridge-register"
 }
 
@@ -355,12 +354,17 @@ run_all_steps() {
 	run_step 4 "部署 l1 合约" step3_deploy_l1_contracts
 	run_step 5 "部署 xjst 节点" step4_deploy_xjst_node
 	# run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
-	run_step 6 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
-	run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge
-	# run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
-	run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
-	run_step 9 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
-	run_step 10 "检查 PM2 进程是否有失败" step12_check_pm2_online
+
+	if [[ "${NODE_ID}" == "node-1" ]]; then
+		run_step 6 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
+		run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
+		# run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
+		run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
+		run_step 9 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
+		run_step 10 "检查 PM2 进程是否有失败" step12_check_pm2_online
+	else
+		echo "🔹 跳过后续步骤, 因为当前是 ${NODE_ID}"
+	fi
 	echo "🔹 所有步骤完成"
 }
 
