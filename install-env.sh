@@ -69,7 +69,8 @@ install_pm2() {
   npm install -g pm2
 }
 
-source ~/.ydyl-env
+
+
 ensure_cmd "cast"    install_foundry
 ensure_cmd "go"      install_go
 ensure_cmd "polycli" install_polycli
@@ -79,6 +80,9 @@ ensure_cmd "nvm"     install_nvm
 ensure_cmd "node"    install_node
 ensure_cmd "yarn"    install_yarn
 ensure_cmd "pm2"     install_pm2
+
+# shellcheck disable=SC1091
+source "$HOME/.ydyl-env"
 
 # 设置 oh-my-zsh
 if [ -z "${ZSH_CUSTOM:-}" ]; then
