@@ -7,8 +7,8 @@ set -Eueo pipefail
 #    - L1_CHAIN_ID: L1 链 chain id（用于部署/元数据记录/区分网络）
 #    - L2_CHAIN_ID: L2 链 chain id（用于部署/元数据记录/区分网络）
 #    - L1_RPC_URL: 连接 L1 的 RPC 地址（用于 L1 转账、以及 jsonrpc-proxy 上游）
-#    - L1_VAULT_PRIVATE_KEY（或 KURTOSIS_L1_VAULT_PRIVATE_KEY 二选一）:
-#        L1 主资金账户私钥（用于给部署相关账户转 L1 ETH；同时用于推导 KURTOSIS_L1_FUND_VAULT_ADDRESS）
+#    - L1_VAULT_PRIVATE_KEY:
+#        L1 主资金账户私钥（用于给部署相关账户转 L1 ETH）
 #    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用）
 #    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
 #
@@ -22,7 +22,7 @@ set -Eueo pipefail
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
 #    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1/生成函数自动生成（kurtosis 预分配账户助记词）
-#    - KURTOSIS_L1_FUND_VAULT_ADDRESS: 由 L1_VAULT_PRIVATE_KEY 推导（用于 step2 接收 L1 资金）
+#    - KURTOSIS_L1_FUND_VAULT_ADDRESS: 由 KURTOSIS_L1_VAULT_PRIVATE_KEY 推导（用于 step2 接收 L1 资金）
 #    - CLAIM_SERVICE_PRIVATE_KEY: step1 自动生成（claim-service EOA）
 #    - L2_PRIVATE_KEY: step1 自动生成（用途：L2 部署 Counter、ydyl-gen-accounts 付款/部署账户）
 #    - L2_ADDRESS: 由 L2_PRIVATE_KEY 推导（用于 step5 接收 L2 充值）
@@ -75,11 +75,22 @@ init_network_vars() {
 
 gen_op_enclave_deploy_accounts() {
     # step2_fund_l1_accounts 要求 KURTOSIS_L1_FUND_VAULT_ADDRESS 必须已存在
-    KURTOSIS_L1_VAULT_PRIVATE_KEY=$L1_VAULT_PRIVATE_KEY
+    # 说明：
+    # - KURTOSIS_L1_VAULT_PRIVATE_KEY 用于 kurtosis deploy（与出资账户 L1_VAULT_PRIVATE_KEY 解耦）
+    # - 若希望复用固定值，可在运行前手动 export 这些变量；脚本仅在缺失时生成
+    if [[ -z "${KURTOSIS_L1_VAULT_PRIVATE_KEY:-}" ]]; then
+        KURTOSIS_L1_VAULT_PRIVATE_KEY="0x$(openssl rand -hex 32)"
+    fi
     export KURTOSIS_L1_VAULT_PRIVATE_KEY
-    KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
+
+    if [[ -z "${KURTOSIS_L1_FUND_VAULT_ADDRESS:-}" ]]; then
+        KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
+    fi
     export KURTOSIS_L1_FUND_VAULT_ADDRESS
-    KURTOSIS_L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
+
+    if [[ -z "${KURTOSIS_L1_PREALLOCATED_MNEMONIC:-}" ]]; then
+        KURTOSIS_L1_PREALLOCATED_MNEMONIC=$(cast wallet new-mnemonic --json | jq -r '.mnemonic')
+    fi
     export KURTOSIS_L1_PREALLOCATED_MNEMONIC
 }
 
@@ -106,7 +117,7 @@ record_input_vars() {
 
 load_state_and_check_tools() {
     pipeline_load_state
-    require_commands cast jq pm2 awk envsubst ip npm yarn node kurtosis
+    require_commands cast jq pm2 awk envsubst ip npm yarn node kurtosis openssl
 }
 
 init_persist_vars() {
@@ -158,32 +169,20 @@ check_env_compat() {
 }
 
 require_inputs() {
-    if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
-        echo "错误: 缺少必须的环境变量，请设置：L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY"
+    if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]]; then
+        echo "错误: 缺少必须的环境变量，请设置：L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY"
         echo "变量说明:"
         echo "  L2_CHAIN_ID: L2 链的 chain id"
         echo "  L1_CHAIN_ID: L1 链的 chain id"
         echo "  L1_RPC_URL: 连接 L1 的 RPC 地址"
+        echo "  L1_VAULT_PRIVATE_KEY: L1 主资金账户私钥（用于 step2 给部署相关账户转 L1 ETH）"
         echo "  L1_BRIDGE_HUB_CONTRACT: L1 中继合约地址"
         echo "  L1_REGISTER_BRIDGE_PRIVATE_KEY: L1 注册 bridge 的私钥"
         exit 1
     fi
 
-    # 兼容：L1_VAULT_PRIVATE_KEY 与 KURTOSIS_L1_VAULT_PRIVATE_KEY 二选一即可
-    if [[ -z "${L1_VAULT_PRIVATE_KEY:-}" && -n "${KURTOSIS_L1_VAULT_PRIVATE_KEY:-}" ]]; then
-        L1_VAULT_PRIVATE_KEY="$KURTOSIS_L1_VAULT_PRIVATE_KEY"
-        export L1_VAULT_PRIVATE_KEY
-    fi
-    if [[ -z "${KURTOSIS_L1_VAULT_PRIVATE_KEY:-}" && -n "${L1_VAULT_PRIVATE_KEY:-}" ]]; then
-        KURTOSIS_L1_VAULT_PRIVATE_KEY="$L1_VAULT_PRIVATE_KEY"
-        export KURTOSIS_L1_VAULT_PRIVATE_KEY
-    fi
-    if [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${KURTOSIS_L1_VAULT_PRIVATE_KEY:-}" ]]; then
-        echo "错误: 请设置 L1_VAULT_PRIVATE_KEY 或 KURTOSIS_L1_VAULT_PRIVATE_KEY（至少一个）"
-        echo "变量说明:"
-        echo "  L1_VAULT_PRIVATE_KEY/KURTOSIS_L1_VAULT_PRIVATE_KEY: L1 主资金账户私钥（用于 step2 给部署相关账户转 L1 ETH，并推导 KURTOSIS_L1_FUND_VAULT_ADDRESS）"
-        exit 1
-    fi
+    # 注意：KURTOSIS_L1_VAULT_PRIVATE_KEY 不再默认与 L1_VAULT_PRIVATE_KEY 绑定；
+    # 若未设置，会在 gen_op_enclave_deploy_accounts 中自动生成随机值。
 }
 
 parse_start_step_and_export_restored() {
