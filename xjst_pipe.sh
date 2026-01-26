@@ -99,6 +99,8 @@ record_input_vars() {
 	# shellcheck disable=SC2034
 	INPUT_L1_RPC_URL="${L1_RPC_URL-}"
 	# shellcheck disable=SC2034
+	INPUT_L1_RPC_URL_WS="${L1_RPC_URL_WS-}"
+	# shellcheck disable=SC2034
 	INPUT_L1_VAULT_PRIVATE_KEY="${L1_VAULT_PRIVATE_KEY-}"
 	# shellcheck disable=SC2034
 	INPUT_KURTOSIS_L1_VAULT_PRIVATE_KEY="${KURTOSIS_L1_VAULT_PRIVATE_KEY-}"
@@ -130,6 +132,7 @@ init_persist_vars() {
 		L1_CHAIN_ID
 		L2_CHAIN_ID
 		L1_RPC_URL
+		L1_RPC_URL_WS
 		L1_VAULT_PRIVATE_KEY
 		KURTOSIS_L1_VAULT_PRIVATE_KEY
 		KURTOSIS_L1_PREALLOCATED_MNEMONIC
@@ -167,6 +170,7 @@ check_env_compat() {
 		check_input_env_consistency L1_CHAIN_ID
 		check_input_env_consistency L2_CHAIN_ID
 		check_input_env_consistency L1_RPC_URL
+		check_input_env_consistency L1_RPC_URL_WS
 		check_input_env_consistency L1_VAULT_PRIVATE_KEY
 		check_input_env_consistency KURTOSIS_L1_VAULT_PRIVATE_KEY
 		check_input_env_consistency KURTOSIS_L1_PREALLOCATED_MNEMONIC
@@ -180,12 +184,13 @@ check_env_compat() {
 }
 
 require_inputs() {
-	if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]] || [[ -z "${CHAIN_NODE_IPS:-}" ]] || [[ -z "${NODE_ID:-}" ]] || [[ -z "${GROUP_ID:-}" ]]; then
+	if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [ -z "${L1_RPC_URL_WS:-}" ] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]] || [[ -z "${CHAIN_NODE_IPS:-}" ]] || [[ -z "${NODE_ID:-}" ]] || [[ -z "${GROUP_ID:-}" ]]; then
 		echo "错误: 缺少必须的环境变量，请设置：L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY,CHAIN_NODE_IPS,NODE_ID"
 		echo "变量说明:"
 		echo "  L2_CHAIN_ID: L2 链的 chain id"
 		echo "  L1_CHAIN_ID: L1 链的 chain id"
 		echo "  L1_RPC_URL: 连接 L1 的 RPC 地址"
+		echo "  L1_RPC_URL_WS: 连接 L1 的 WS 地址"
 		echo "  L1_VAULT_PRIVATE_KEY: L1 主资金账户私钥（用于 step2 给部署相关账户转 L1 ETH）"
 		echo "  L1_BRIDGE_HUB_CONTRACT: L1 中继合约地址"
 		echo "  L1_REGISTER_BRIDGE_PRIVATE_KEY: L1 注册 bridge 的私钥"
@@ -288,7 +293,7 @@ step5_deploy_xjst_node() {
 			L1_UNIFIED_BRIDGE_ADDR="${L1_UNIFIED_BRIDGE_ADDR}" \
 			CHAIN_NODE_IPS="${CHAIN_NODE_IPS}" \
 			NODE_ID="$NODE_ID" \
-			L1_ESPACE_RPC_URL="${L1_RPC_URL}" \
+			L1_ESPACE_RPC_URL="${L1_RPC_URL_WS}" \
 			AUTO_DEPLOY_L1_CONTRACTS="false" \
 			L1_ADMIN_PRIVATE_KEY="${KURTOSIS_L1_VAULT_PRIVATE_KEY}" \
 			L1_ADMIN_ADDRESS="${KURTOSIS_L1_FUND_VAULT_ADDRESS}" \
@@ -297,7 +302,7 @@ step5_deploy_xjst_node() {
 		FETCH_L1_FROM_NODE1="true" \
 			CHAIN_NODE_IPS="${CHAIN_NODE_IPS}" \
 			NODE_ID="$NODE_ID" \
-			L1_ESPACE_RPC_URL="${L1_RPC_URL}" \
+			L1_ESPACE_RPC_URL="${L1_RPC_URL_WS}" \
 			AUTO_DEPLOY_L1_CONTRACTS="false" \
 			L1_ADMIN_PRIVATE_KEY="${KURTOSIS_L1_VAULT_PRIVATE_KEY}" \
 			L1_ADMIN_ADDRESS="${KURTOSIS_L1_FUND_VAULT_ADDRESS}" \
