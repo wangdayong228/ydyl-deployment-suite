@@ -356,7 +356,7 @@ run_all_steps() {
 	if [[ "${NODE_ID}" != "node-1" ]]; then
 		echo "🔹 当前是 ${NODE_ID}，跳过初始化身份和密钥，直接部署 xjst 节点"
 		gen_xjst_deploy_accounts
-		run_step 1 "部署 xjst 节点" step4_deploy_xjst_node
+		run_step 1 "部署 xjst 节点" step5_deploy_xjst_node
 		echo "🔹 所有步骤完成"
 		return 0
 	fi
