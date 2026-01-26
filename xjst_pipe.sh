@@ -75,15 +75,11 @@ init_network_vars() {
 }
 
 gen_xjst_deploy_accounts() {
-	# step2_fund_l1_accounts 要求 KURTOSIS_L1_FUND_VAULT_ADDRESS 必须已存在
-	if [[ -z "${KURTOSIS_L1_VAULT_PRIVATE_KEY:-}" ]]; then
-		KURTOSIS_L1_VAULT_PRIVATE_KEY="0x$(openssl rand -hex 32)"
-	fi
+	# 直接使用 L1_VAULT_PRIVATE_KEY 作为 KURTOSIS_L1_VAULT_PRIVATE_KEY，因为 xjst 只有一个持续使用L1私钥发交易的地方，就是调用 l1_unified_bridge
+	# 也是为了简化 node2-4 从 node-1 获取 L1 私钥
+	KURTOSIS_L1_VAULT_PRIVATE_KEY="${L1_VAULT_PRIVATE_KEY}"
 	export KURTOSIS_L1_VAULT_PRIVATE_KEY
-
-	if [[ -z "${KURTOSIS_L1_FUND_VAULT_ADDRESS:-}" ]]; then
-		KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
-	fi
+	KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
 	export KURTOSIS_L1_FUND_VAULT_ADDRESS
 }
 
@@ -274,7 +270,7 @@ step3_deploy_l1_contracts() {
 ########################################
 # STEP4: 部署 kurtosis op - OP 专属
 ########################################
-step4_deploy_xjst_node() {
+step5_deploy_xjst_node() {
 	deploy_node_script="$DIR/xjst-work/client/deploy_node.sh"
 
 	# 如果当前是 node-1, 则传合约地址，否则只设置 fetch_l1_from_node1 为 true
@@ -307,6 +303,10 @@ step4_deploy_xjst_node() {
 			L1_ADMIN_ADDRESS="${KURTOSIS_L1_FUND_VAULT_ADDRESS}" \
 			"$deploy_node_script"
 	fi
+}
+
+step_wait_for_other_nodes_to_start() {
+	node "$DIR"/xjst-work/js-scripts/checkNodePeers.js "${CHAIN_NODE_IPS}" 3
 }
 
 ########################################
@@ -353,6 +353,14 @@ step8_start_op_claim_service() {
 }
 
 run_all_steps() {
+	if [[ "${NODE_ID}" != "node-1" ]]; then
+		echo "🔹 当前是 ${NODE_ID}，跳过初始化身份和密钥，直接部署 xjst 节点"
+		gen_xjst_deploy_accounts
+		run_step 1 "部署 xjst 节点" step4_deploy_xjst_node
+		echo "🔹 所有步骤完成"
+		return 0
+	fi
+
 	run_step 1 "初始化身份和密钥" step1_init_identities
 	gen_xjst_deploy_accounts
 	# reset_l2_private_key
@@ -360,19 +368,18 @@ run_all_steps() {
 	run_step 3 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
 	# run_step 3 "启动 jsonrpc-proxy（L1/L2 RPC 代理）" step3_start_jsonrpc_proxy
 	run_step 4 "部署 l1 合约" step3_deploy_l1_contracts
-	run_step 5 "部署 xjst 节点" step4_deploy_xjst_node
+	run_step 5 "部署 xjst 节点" step5_deploy_xjst_node
 	# run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
 
-	if [[ "${NODE_ID}" == "node-1" ]]; then
-		run_step 6 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
-		run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
-		# run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
-		run_step 8 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
-		run_step 9 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
-		run_step 10 "检查 PM2 进程是否有失败" step12_check_pm2_online
-	else
-		echo "🔹 跳过后续步骤, 因为当前是 ${NODE_ID}"
-	fi
+	# 等待其它节点启动完成后，再执行后续步骤
+	run_step 6 "等待其它节点启动完成后，再执行后续步骤" step_wait_for_other_nodes_to_start
+
+	run_step 7 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
+	run_step 8 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
+	# run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
+	run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
+	run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
+	run_step 11 "检查 PM2 进程是否有失败" step12_check_pm2_online
 	echo "🔹 所有步骤完成"
 }
 
