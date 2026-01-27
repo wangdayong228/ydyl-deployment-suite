@@ -49,7 +49,6 @@ install_make() {
 }
 
 install_python() {
-	sudo apt update
 	sudo apt install -y python3 python3-pip python3.10-venv
 }
 
