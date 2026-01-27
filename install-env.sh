@@ -87,7 +87,7 @@ ensure_cmd "nvm" install_nvm
 ensure_cmd "node" install_node
 ensure_cmd "yarn" install_yarn
 ensure_cmd "pm2" install_pm2
-ensure_cmd "python" install_python
+ensure_cmd "python3" install_python
 
 # 设置 oh-my-zsh
 if [[ ! -d "${ZSH_CUSTOM}/plugins" ]]; then
