@@ -122,8 +122,13 @@ record_input_vars() {
 
 load_state_and_check_tools() {
 	pipeline_load_state
+	
+	# install python venv and dependencies
 	python3 -m venv .venv
 	source "$DIR/.venv/bin/activate"
+	python -m pip install -U pip
+	pip install web3==6.20.1 eth-account==0.10.0
+
 	require_commands cast jq pm2 awk envsubst ip npm yarn node python
 }
 
