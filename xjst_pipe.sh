@@ -122,7 +122,8 @@ record_input_vars() {
 
 load_state_and_check_tools() {
 	pipeline_load_state
-	require_commands cast jq pm2 awk envsubst ip npm yarn node
+	source "$DIR/.venv/bin/activate"
+	require_commands cast jq pm2 awk envsubst ip npm yarn node python
 }
 
 init_persist_vars() {
