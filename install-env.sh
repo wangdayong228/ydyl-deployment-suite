@@ -73,6 +73,11 @@ install_pm2() {
 	npm install -g pm2
 }
 
+if [[ ! -f "$HOME/.ydyl-env" ]]; then
+	cp "$DIR/.ydyl-env" "$HOME/.ydyl-env"
+	source "$HOME/.ydyl-env"
+fi
+
 ensure_cmd "cast" install_foundry
 ensure_cmd "go" install_go
 ensure_cmd "polycli" install_polycli
@@ -83,11 +88,6 @@ ensure_cmd "node" install_node
 ensure_cmd "yarn" install_yarn
 ensure_cmd "pm2" install_pm2
 ensure_cmd "python" install_python
-
-if [[ ! -f "$HOME/.ydyl-env" ]]; then
-	cp "$DIR/.ydyl-env" "$HOME/.ydyl-env"
-	source "$HOME/.ydyl-env"
-fi
 
 # 设置 oh-my-zsh
 if [[ ! -d "${ZSH_CUSTOM}/plugins" ]]; then
