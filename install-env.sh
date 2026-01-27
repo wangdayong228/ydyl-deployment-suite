@@ -95,8 +95,12 @@ if [[ ! -d "${ZSH_CUSTOM}/plugins" ]]; then
 	echo "为安装 oh-my-zsh 插件，请自行下载 plugin 并设置"
 else
 	cd "$ZSH_CUSTOM/plugins"
-	git clone https://github.com/zsh-users/zsh-autosuggestions
-	git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
+	if [[ ! -d "zsh-autosuggestions" ]]; then
+		git clone https://github.com/zsh-users/zsh-autosuggestions
+	fi
+	if [[ ! -d "zsh-syntax-highlighting" ]]; then
+		git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
+	fi
 	echo "请在 ~/.zshrc 文件手动设置 oh-my-zsh 插件"
 	echo "plugins=("
 	echo "    git"
