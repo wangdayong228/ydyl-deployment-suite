@@ -77,6 +77,8 @@ if [[ ! -f "$HOME/.ydyl-env" ]]; then
 	DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	cp "$DIR/.ydyl-env" "$HOME/.ydyl-env"
 	source "$HOME/.ydyl-env"
+else 
+	source "$HOME/.ydyl-env"
 fi
 
 ensure_cmd "cast" install_foundry
