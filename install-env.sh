@@ -74,6 +74,7 @@ install_pm2() {
 }
 
 if [[ ! -f "$HOME/.ydyl-env" ]]; then
+	DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	cp "$DIR/.ydyl-env" "$HOME/.ydyl-env"
 	source "$HOME/.ydyl-env"
 fi
