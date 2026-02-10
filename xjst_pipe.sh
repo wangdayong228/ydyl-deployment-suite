@@ -391,7 +391,7 @@ run_all_steps() {
 	# run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
 	run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
 	run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
-	run_step 11 "检查 PM2 进程是否有失败" step12_check_pm2_online
+	run_step 11 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
 	echo "🔹 所有步骤完成"
 }
 
