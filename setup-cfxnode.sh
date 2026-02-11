@@ -20,7 +20,7 @@ echo "✅ [1/3] Deploy deterministic contract done"
 
 echo "🌉 [2/3] Deploy bridge contract..."
 cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 100ether 0xef431755Bb97ed53874E3e27cAD2cD3399558e25
-cd "${DIR}/zk-claim-service" && printf 'y\ny\n' | PRIVATE_KEY=0xa3d9e98f0ba98960bf3755b7519d18b2250b0b8be5e38d5483dcfa3875df2d6f npx hardhat ignition deploy ignition/modules/4_deployzkBR.js --network espacedev --reset
+cd "${DIR}/zk-claim-service" && PRIVATE_KEY=0xa3d9e98f0ba98960bf3755b7519d18b2250b0b8be5e38d5483dcfa3875df2d6f npx hardhat ignition deploy ignition/modules/4_deployzkBR.js --network espacedev --reset
 echo "✅ [2/3] Deploy bridge contract done"
 
 echo "🛰️ [3/3] Start jsonrpc-proxy-op..."
