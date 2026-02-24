@@ -1,5 +1,6 @@
 #!/bin/bash
 set -Eueo pipefail
+set -x
 
 ########################################
 #	-1.1 启动后自动部署 deterministic 合约
