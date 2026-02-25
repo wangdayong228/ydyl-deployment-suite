@@ -14,7 +14,7 @@ set -Eueo pipefail
 #    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
 #
 # 2. 可选传入（可覆盖默认）的环境变量：
-#    - ENCLAVE_NAME: kurtosis enclave 名（默认 op-gen）
+#    - ENCLAVE_NAME: kurtosis enclave 名（默认 xjst-gen）
 #    - L2_TYPE: L2 类型编号（默认 1=op；会传递给注册脚本）
 #    - L2_RPC_URL: L2 RPC（默认 http://127.0.0.1/l2rpc；由 kurtosis 暴露到本机）
 #    - YDYL_SCRIPTS_LIB_DIR: 脚本库路径（默认 $DIR/ydyl-scripts-lib）
@@ -65,8 +65,8 @@ load_libs() {
 }
 
 init_network_vars() {
-	ENCLAVE_NAME="${ENCLAVE_NAME:-op-gen}"
-	NETWORK="${NETWORK:-${ENCLAVE_NAME#op-}}" # 移除 "op-" 前缀
+	ENCLAVE_NAME="${ENCLAVE_NAME:-xjst-gen}"
+	NETWORK="${NETWORK:-${ENCLAVE_NAME#xjst-}}" # 移除 "xjst-" 前缀
 	# shellcheck disable=SC2034
 	L2_RPC_URL="http://127.0.0.1/l2rpc"
 	# OP 类型
@@ -355,15 +355,6 @@ step7_deploy_counter_and_register_bridge_if_node1() {
 	fi
 }
 
-########################################
-# STEP8: 启动 op-claim-service 服务 - OP 专属
-########################################
-step8_start_op_claim_service() {
-	cd "$DIR"/op-claim-service || return 1
-	npm i
-	npm run start
-}
-
 run_all_steps() {
 	if [[ "${NODE_ID}" != "node-1" ]]; then
 		echo "🔹 当前是 ${NODE_ID}，跳过初始化身份和密钥，直接部署 xjst 节点"
@@ -378,7 +369,6 @@ run_all_steps() {
 	# reset_l2_private_key
 	run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
 	run_step 3 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
-	# run_step 3 "启动 jsonrpc-proxy（L1/L2 RPC 代理）" step3_start_jsonrpc_proxy
 	run_step 4 "部署 l1 合约" step3_deploy_l1_contracts
 	run_step 5 "部署 xjst 节点" step5_deploy_xjst_node
 	# run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
@@ -388,7 +378,6 @@ run_all_steps() {
 
 	run_step 7 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
 	run_step 8 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
-	# run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
 	run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
 	run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
 	run_step 11 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
