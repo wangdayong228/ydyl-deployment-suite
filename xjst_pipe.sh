@@ -81,6 +81,10 @@ gen_xjst_deploy_accounts() {
 	export KURTOSIS_L1_VAULT_PRIVATE_KEY
 	KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
 	export KURTOSIS_L1_FUND_VAULT_ADDRESS
+
+	# 使用固定私钥，xjst 的 l2 发交易不需要代币，但命令 `ydyl-deploy-client gen-cross-tx-config` 需要
+	L2_VAULT_PRIVATE_KEY="0x1000000000000000000000000000000000000000000000000000000000000000"
+	export L2_VAULT_PRIVATE_KEY
 }
 
 # reset_l2_private_key() {
