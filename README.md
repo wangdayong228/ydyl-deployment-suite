@@ -23,6 +23,9 @@ bash cdk_pipe.sh
 
 # OP L2 全链路自动化
 bash op_pipe.sh
+
+# XJST # OP L2 全链路自动化
+bash xjst_pipe.sh
 ```
 
 ## 说明：Counter 部署与 bridgeHub 注册（step7）
@@ -35,3 +38,7 @@ bash op_pipe.sh
 - CLI：可重复传参 `--bridges 0x... --bridges 0x...`
 
 
+## 重置 fullnode 后环境配置
+1. confura
+2. scan
+3. 运行 [setup-cfxnode.sh](./setup-cfxnode.sh) 部署 determistic 合约和启动 jsonrpc-proxy-op
