@@ -25,5 +25,5 @@ cd "${DIR}/zk-claim-service" && yarn && PRIVATE_KEY=0xa3d9e98f0ba98960bf3755b751
 echo "✅ [2/3] Deploy bridge contract done"
 
 echo "🛰️ [3/3] Start jsonrpc-proxy-op..."
-ssh root@47.83.135.176 'zsh -ic "cd ~/workspace/jsonrpc-proxy && (npm run clear || true) && (pm2 delete jsonrpc-proxy-op || true) && npm run start:op"'
+ssh root@47.83.135.176 'zsh -ic "cd ~/workspace/ydyl-deployment-suite/jsonrpc-proxy && (npm run clear || true) && (pm2 delete jsonrpc-proxy-op || true) && npm run start:op"'
 echo "✅ [3/3] Start jsonrpc-proxy-op done"
