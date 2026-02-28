@@ -133,7 +133,7 @@ load_state_and_check_tools() {
 	python -m pip install -U pip
 	pip install web3==6.20.1 eth-account==0.10.0
 
-	require_commands cast jq pm2 awk envsubst ip npm yarn node python
+	require_commands cast jq curl pm2 awk envsubst ip npm yarn node python
 }
 
 init_persist_vars() {
@@ -173,6 +173,7 @@ init_persist_vars() {
 		L1_SIMPLE_CALCULATOR_ADDR
 		L1_STATE_SENDER_ADDR
 		L1_UNIFIED_BRIDGE_ADDR
+		L1_START_EPOCH
 	)
 }
 
@@ -262,25 +263,40 @@ step3_deploy_l1_contracts() {
 	source "$DIR/.venv/bin/activate"
 	deploy_l1_contracts_py="$DIR/xjst-work/docker_builder/deploy_l1_contracts.py"
 	python "$deploy_l1_contracts_py" --rpc-url "${L1_RPC_URL}" --chain-id "${L1_CHAIN_ID}" --private-key "${KURTOSIS_L1_VAULT_PRIVATE_KEY}"
+}
 
-	local l1_contracts_file="$DIR"/xjst-work/output/contracts.json
-	local l1_contracts
-	l1_contracts=$(cat "$l1_contracts_file")
+get_l1_deploy_contracts() {
+	local node1_ip
+	local api_url
+	local response
+	node1_ip=$(echo "${CHAIN_NODE_IPS}" | sed 's/\[//g; s/\]//g; s/ //g' | cut -d',' -f1)
+	if [[ -z "${node1_ip}" ]]; then
+		echo "错误: 无法从 CHAIN_NODE_IPS 解析 node-1 IP"
+		return 1
+	fi
+	api_url="http://${node1_ip}:8080/v1/result/node-deployment-contracts/xjst"
 
-	L1_SIMPLE_CALCULATOR_ADDR=$(echo "$l1_contracts" | jq -r '.simple_calculator // empty')
+	echo "🔹 从 ydyl-console-service 获取 XJST L1 合约结果: ${api_url}"
+	response=$(curl --silent --show-error --fail --location "${api_url}")
+
+	L1_SIMPLE_CALCULATOR_ADDR=$(echo "${response}" | jq -r '.simple_calculator // .data.simple_calculator // empty')
 	export L1_SIMPLE_CALCULATOR_ADDR
-	L1_STATE_SENDER_ADDR=$(echo "$l1_contracts" | jq -r '.state_sender // empty')
+	L1_STATE_SENDER_ADDR=$(echo "${response}" | jq -r '.state_sender // .data.state_sender // empty')
 	export L1_STATE_SENDER_ADDR
-	L1_UNIFIED_BRIDGE_ADDR=$(echo "$l1_contracts" | jq -r '.unified_bridge // empty')
+	L1_UNIFIED_BRIDGE_ADDR=$(echo "${response}" | jq -r '.unified_bridge // .data.unified_bridge // empty')
 	export L1_UNIFIED_BRIDGE_ADDR
+	L1_START_EPOCH=$(echo "${response}" | jq -r '.l1_start_epoch // .data.l1_start_epoch // empty')
+	export L1_START_EPOCH
 
 	require_var L1_SIMPLE_CALCULATOR_ADDR
 	require_var L1_STATE_SENDER_ADDR
 	require_var L1_UNIFIED_BRIDGE_ADDR
+	require_var L1_START_EPOCH
 
 	echo "🔹 L1_SIMPLE_CALCULATOR_ADDR: $L1_SIMPLE_CALCULATOR_ADDR"
 	echo "🔹 L1_STATE_SENDER_ADDR: $L1_STATE_SENDER_ADDR"
 	echo "🔹 L1_UNIFIED_BRIDGE_ADDR: $L1_UNIFIED_BRIDGE_ADDR"
+	echo "🔹 L1_START_EPOCH: $L1_START_EPOCH"
 }
 
 ########################################
@@ -298,10 +314,14 @@ step5_deploy_xjst_node() {
 		return 0
 	fi
 
+	# 获取 L2 引用的 L1 首个区块
+	get_l1_deploy_contracts
+
 	if [[ "${NODE_ID}" == "node-1" ]]; then
 		L1_SIMPLE_CALCULATOR_ADDR="${L1_SIMPLE_CALCULATOR_ADDR}" \
 			L1_STATE_SENDER_ADDR="${L1_STATE_SENDER_ADDR}" \
 			L1_UNIFIED_BRIDGE_ADDR="${L1_UNIFIED_BRIDGE_ADDR}" \
+			L1_START_EPOCH="${L1_START_EPOCH}" \
 			CHAIN_NODE_IPS="${CHAIN_NODE_IPS}" \
 			NODE_ID="$NODE_ID" \
 			L1_ESPACE_RPC_URL="${L1_RPC_URL_WS}" \
@@ -311,7 +331,10 @@ step5_deploy_xjst_node() {
 			L1_ADMIN_ADDRESS="${KURTOSIS_L1_FUND_VAULT_ADDRESS}" \
 			"$deploy_node_script"
 	else
-		FETCH_L1_FROM_NODE1="true" \
+		FETCH_L1_FROM_NODE1="false" \
+			L1_STATE_SENDER_ADDR="${L1_STATE_SENDER_ADDR}" \
+			L1_UNIFIED_BRIDGE_ADDR="${L1_UNIFIED_BRIDGE_ADDR}" \
+			L1_START_EPOCH="${L1_START_EPOCH}" \
 			CHAIN_NODE_IPS="${CHAIN_NODE_IPS}" \
 			NODE_ID="$NODE_ID" \
 			L1_ESPACE_RPC_URL="${L1_RPC_URL_WS}" \
