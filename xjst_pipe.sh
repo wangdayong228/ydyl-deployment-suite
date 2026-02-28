@@ -269,6 +269,9 @@ get_l1_deploy_contracts() {
 	local node1_ip
 	local api_url
 	local response
+	fetch_contracts_once() {
+		response=$(curl --silent --show-error --fail --location "${api_url}")
+	}
 	node1_ip=$(echo "${CHAIN_NODE_IPS}" | sed 's/\[//g; s/\]//g; s/ //g' | cut -d',' -f1)
 	if [[ -z "${node1_ip}" ]]; then
 		echo "错误: 无法从 CHAIN_NODE_IPS 解析 node-1 IP"
@@ -276,8 +279,11 @@ get_l1_deploy_contracts() {
 	fi
 	api_url="http://${node1_ip}:8080/v1/result/node-deployment-contracts/xjst"
 
-	echo "🔹 从 ydyl-console-service 获取 XJST L1 合约结果: ${api_url}"
-	response=$(curl --silent --show-error --fail --location "${api_url}")
+	echo "🔹 从 ydyl-console-service 获取 XJST L1 合约结果: ${api_url}（最多重试 5 分钟）"
+	run_with_retry 30 10 fetch_contracts_once || {
+		echo "错误: 等待 ydyl-console-service 超时（30 次，每次间隔 10s）"
+		return 1
+	}
 
 	L1_SIMPLE_CALCULATOR_ADDR=$(echo "${response}" | jq -r '.simple_calculator // .data.simple_calculator // empty')
 	export L1_SIMPLE_CALCULATOR_ADDR
