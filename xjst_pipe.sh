@@ -353,7 +353,7 @@ step5_deploy_xjst_node() {
 }
 
 step_wait_for_other_nodes_to_start() {
-	node "$DIR"/xjst-work/js-scripts/checkNodePeers.js "${CHAIN_NODE_IPS}" 5
+	node "$DIR"/xjst-work/js-scripts/checkNodePeers.js "${CHAIN_NODE_IPS}" 10
 }
 
 ########################################
