@@ -27,3 +27,8 @@ echo "✅ [2/3] Deploy bridge contract done"
 echo "🛰️ [3/3] Start jsonrpc-proxy-op..."
 ssh ubuntu@184.32.182.132 'zsh -ic "cd ~/workspace/ydyl-deployment-suite/jsonrpc-proxy && (npm run clear || true) && (pm2 delete jsonrpc-proxy-op || true) && npm run start:op"'
 echo "✅ [3/3] Start jsonrpc-proxy-op done"
+
+echo "🔄 [4/4] Start fund zh and xjst accounts..."
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x0f9B62bA159D889A9413Fd0DD742C409a9841793
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x4b2a49E584da4a9F7332d9877B07c0b3198B4c0E
+echo "✅ [4/4] Start fund zh and xjst accounts done"
