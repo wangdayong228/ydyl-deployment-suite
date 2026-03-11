@@ -82,8 +82,8 @@ gen_xjst_deploy_accounts() {
 	KURTOSIS_L1_FUND_VAULT_ADDRESS=$(cast wallet address --private-key "$KURTOSIS_L1_VAULT_PRIVATE_KEY")
 	export KURTOSIS_L1_FUND_VAULT_ADDRESS
 
-	# 使用固定私钥，xjst 的 l2 发交易不需要代币，但命令 `ydyl-deploy-client gen-cross-tx-config` 需要
-	L2_VAULT_PRIVATE_KEY="0x1000000000000000000000000000000000000000000000000000000000000000"
+	# 使用固定私钥，xjst 的 l2 发普通交易不需要代币，但 1. 命令 `ydyl-deploy-client gen-cross-tx-config` 需要配置。 2. ydyl-gen-accounts 需要余额转账
+	L2_VAULT_PRIVATE_KEY="0xc28da5b949956922986bab322e320acf159ea5da3a5f97dbd643a6b049bc89ed"
 	export L2_VAULT_PRIVATE_KEY
 }
 
@@ -126,7 +126,7 @@ record_input_vars() {
 
 load_state_and_check_tools() {
 	pipeline_load_state
-	
+
 	# install python venv and dependencies
 	python3 -m venv .venv
 	source "$DIR/.venv/bin/activate"
@@ -196,22 +196,23 @@ check_env_compat() {
 }
 
 require_inputs() {
-	if [[ -z "${L2_CHAIN_ID:-}" ]] || [[ -z "${L1_CHAIN_ID:-}" ]] || [[ -z "${L1_RPC_URL:-}" ]] || [ -z "${L1_RPC_URL_WS:-}" ] || [[ -z "${L1_VAULT_PRIVATE_KEY:-}" ]] || [[ -z "${L1_BRIDGE_HUB_CONTRACT:-}" ]] || [[ -z "${L1_REGISTER_BRIDGE_PRIVATE_KEY:-}" ]] || [[ -z "${CHAIN_NODE_IPS:-}" ]] || [[ -z "${NODE_ID:-}" ]] || [[ -z "${GROUP_ID:-}" ]]; then
-		echo "错误: 缺少必须的环境变量，请设置：L2_CHAIN_ID,L1_CHAIN_ID,L1_RPC_URL,L1_VAULT_PRIVATE_KEY,L1_BRIDGE_HUB_CONTRACT,L1_REGISTER_BRIDGE_PRIVATE_KEY,CHAIN_NODE_IPS,NODE_ID"
-		echo "变量说明:"
-		echo "  L2_CHAIN_ID: L2 链的 chain id"
-		echo "  L1_CHAIN_ID: L1 链的 chain id"
-		echo "  L1_RPC_URL: 连接 L1 的 RPC 地址"
-		echo "  L1_RPC_URL_WS: 连接 L1 的 WS 地址"
-		echo "  L1_VAULT_PRIVATE_KEY: L1 主资金账户私钥（用于 step2 给部署相关账户转 L1 ETH）"
-		echo "  L1_BRIDGE_HUB_CONTRACT: L1 中继合约地址"
-		echo "  L1_REGISTER_BRIDGE_PRIVATE_KEY: L1 注册 bridge 的私钥"
-		echo "  CHAIN_NODE_IPS: 链节点 IP 地址数组"
-		echo "  NODE_ID: 链节点 ID"
-		echo "  GROUP_ID: 链组 ID"
-		exit 1
-	fi
+	local required_vars=(
+		L2_CHAIN_ID
+		L1_CHAIN_ID
+		L1_RPC_URL
+		L1_RPC_URL_WS
+		L1_VAULT_PRIVATE_KEY
+		L1_BRIDGE_HUB_CONTRACT
+		L1_REGISTER_BRIDGE_PRIVATE_KEY
+		CHAIN_NODE_IPS
+		NODE_ID
+		GROUP_ID
+	)
 
+	local v
+	for v in "${required_vars[@]}"; do
+		require_var "$v" || return 1
+	done
 	# 注意：KURTOSIS_L1_VAULT_PRIVATE_KEY 不再默认与 L1_VAULT_PRIVATE_KEY 绑定；
 	# 若未设置，会在 gen_op_enclave_deploy_accounts 中自动生成随机值。
 }
@@ -356,6 +357,26 @@ step_wait_for_other_nodes_to_start() {
 	node "$DIR"/xjst-work/js-scripts/checkNodePeers.js "${CHAIN_NODE_IPS}" 10
 }
 
+step_fund_xjst_l2_accounts() {
+	require_var L2_RPC_URL
+	require_var L2_VAULT_PRIVATE_KEY
+	require_var L2_ADDRESS
+
+	if [[ "${DRYRUN:-false}" = "true" ]]; then
+		echo "🔹 DRYRUN 模式: 调用 6_fund.ts 给 ${L2_ADDRESS} 充值 10000 ETH（不执行实际转账）"
+		return 0
+	fi
+
+	echo "🔹 实际调用 6_fund.ts 给 ${L2_ADDRESS} 充值 10000 ETH"
+	cd "$DIR"/ydyl-gen-accounts || return 1
+	run_with_retry 3 5 npx ts-node scripts/6_fund.ts \
+		--l2type 2 \
+		--rpc "$L2_RPC_URL" \
+		--funderKey "$L2_VAULT_PRIVATE_KEY" \
+		--targetAmountEth 10000 \
+		--recipients "$L2_ADDRESS" || return 1
+}
+
 ########################################
 # STEP6: 生成 OP 相关 env（op-work/scripts 下生成，再拷贝到服务目录） - OP 专属
 ########################################
@@ -406,16 +427,16 @@ run_all_steps() {
 	run_step 3 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
 	run_step 4 "部署 l1 合约" step3_deploy_l1_contracts
 	run_step 5 "部署 xjst 节点" step5_deploy_xjst_node
-	# run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
+	run_step 6 "给 L2_PRIVATE_KEY 转账 L2 ETH" step_fund_xjst_l2_accounts
 
 	# 等待其它节点启动完成后，再执行后续步骤
-	run_step 6 "等待其它节点启动完成后，再执行后续步骤" step_wait_for_other_nodes_to_start
+	run_step 7 "等待其它节点启动完成后，再执行后续步骤" step_wait_for_other_nodes_to_start
 
-	run_step 7 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
-	run_step 8 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
-	run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
-	run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
-	run_step 11 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
+	run_step 8 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
+	run_step 9 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
+	run_step 10 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
+	run_step 11 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
+	run_step 12 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
 	echo "🔹 所有步骤完成"
 }
 
