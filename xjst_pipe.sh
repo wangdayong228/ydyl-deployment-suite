@@ -369,6 +369,7 @@ step_fund_xjst_l2_accounts() {
 
 	echo "🔹 实际调用 6_fund.ts 给 ${L2_ADDRESS} 充值 10000 ETH"
 	cd "$DIR"/ydyl-gen-accounts || return 1
+	npm i
 	run_with_retry 3 5 npx ts-node scripts/6_fund.ts \
 		--l2type 2 \
 		--rpc "$L2_RPC_URL" \
