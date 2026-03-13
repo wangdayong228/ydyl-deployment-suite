@@ -406,9 +406,10 @@ L2_TYPE=${L2_TYPE}
 
 step7_deploy_counter_and_register_bridge_if_node1() {
 	if [[ "${NODE_ID}" == "node-1" ]]; then
-		run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge
+		echo "部署 counter 合约并注册 bridge 到 L1 中继合约" 
+		step7_deploy_counter_and_register_bridge
 	else
-		run_step 7 "跳过部署 counter 合约并注册 bridge 到 L1 中继合约, 因为当前是 ${NODE_ID}"
+		echo "跳过部署 counter 合约并注册 bridge 到 L1 中继合约, 因为当前是 ${NODE_ID}"
 	fi
 }
 
