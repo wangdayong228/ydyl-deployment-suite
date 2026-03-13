@@ -207,6 +207,7 @@ require_inputs() {
 		CHAIN_NODE_IPS
 		NODE_ID
 		GROUP_ID
+		ENABLE_GEN_ACC
 	)
 
 	local v
