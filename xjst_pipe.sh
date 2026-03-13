@@ -279,7 +279,7 @@ get_l1_deploy_contracts() {
 		echo "错误: 无法从 CHAIN_NODE_IPS 解析 node-1 IP"
 		return 1
 	fi
-	api_url="http://${node1_ip}:8080/v1/result/node-deployment-contracts/xjst"
+	api_url="http://${node1_ip}:8080/v1/result/node-deployment-contracts/xjst/l1"
 
 	echo "🔹 从 ydyl-console-service 获取 XJST L1 合约结果: ${api_url}（最多重试 5 分钟）"
 	run_with_retry 30 10 fetch_contracts_once || {
