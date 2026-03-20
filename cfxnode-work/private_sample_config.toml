@@ -1,9 +1,10 @@
-# bootnodes is a list of nodes that a conflux node trusts, and will be used to sync the blockchain when a node starts. 
+# bootnodes is a list of nodes that a conflux node trusts, and will be used to sync the blockchain when a node starts.
 # The value is a string divided by comma without space, and every entry is a node
 # A node is identified by cfxnode://NODEID@PUBLICIP:PORT
 # By default, no bootnodes are provided. What's provided here is a list of nodes that Conflux Team maintains across the world.
 
-bootnodes="cfxnode://1d45510512bd676934a026b46545cca55d5f2b2776754f54ce859fa1960261e16758021b3691cc6c79e9e4d83d45ec0aaf7a98817d7d23f98312e17e1315ff15@34.219.245.189:32323,cfxnode://27d01999a91e199258dafac94f4279b24f9e6abe02d774624b81c3dba06bde1650dd178a0556a4081bc5325e3d03019cb42b4d448f441942299d4cd32bbdd728@52.12.11.65:32323,cfxnode://88c054daec1f51984448ea4bccc30947655889f41048c4fb5ac0c8836531b743cd16bc0f929f7a1c10947c51692d9705bb551e6faa73d1a8649d329aab7907dd@16.148.64.138:32323"
+bootnodes="cfxnode://1d45510512bd676934a026b46545cca55d5f2b2776754f54ce859fa1960261e16758021b3691cc6c79e9e4d83d45ec0aaf7a98817d7d23f98312e17e1315ff15@16.148.64.138:32323,cfxnode://27d01999a91e199258dafac94f4279b24f9e6abe02d774624b81c3dba06bde1650dd178a0556a4081bc5325e3d03019cb42b4d448f441942299d4cd32bbdd728@52.12.11.65:32323,cfxnode://88c054daec1f51984448ea4bccc30947655889f41048c4fb5ac0c8836531b743cd16bc0f929f7a1c10947c51692d9705bb551e6faa73d1a8649d329aab7907dd@34.219.245.189:32323"
+net_key="5eb4a446ecc5cba5ebfdb295f2d60e7fd2eecd5b155207da91f46c17e87a7f41"
 
 # Set the node type to Full node, Archive node, or Light node.
 # Possible values are "full", "archive", or "light".
@@ -63,7 +64,7 @@ node_type = "archive"
 # If the value is set and not "disable", `mining_author` must be set.
 #
 mining_type = "cpu"
-mining_author = "0x111C290704B850d2be9aC5F486fD7073B7ce4Ad9"
+mining_author = "0x19619a70899B445859Fc86120CD9Ff74e6252A2D"
 
 # Listen address for stratum
 #
@@ -157,7 +158,7 @@ jsonrpc_http_port=12537
 jsonrpc_local_http_port=12539
 # jsonrpc_local_ws_port=12540
 jsonrpc_http_eth_port=8545
-# jsonrpc_ws_eth_port=8546
+jsonrpc_ws_eth_port=8546
 
 # Specify the APIs available through the public JSON-RPC interfaces (HTTP, TCP, WebSocket)
 # using a comma-delimited list of API names.
@@ -175,9 +176,9 @@ poll_lifetime_in_seconds = 60
 #
 public_evm_rpc_apis = "all"
 
-# By default, the maximum gas limit supported by gas estimation is 27 million for 
-# core space and 15 million for espace. These limits are also supported by the majority 
-# of transaction pools. You can override this parameter, but be aware that the estimated 
+# By default, the maximum gas limit supported by gas estimation is 27 million for
+# core space and 15 million for espace. These limits are also supported by the majority
+# of transaction pools. You can override this parameter, but be aware that the estimated
 # gas may be rejected by transaction pools, including the transaction pool on yourself,
 #
 # max_estimation_gas_limit = 30_000_000
@@ -421,9 +422,10 @@ persist_tx_index = true
 #
 # tx_pool_min_native_tx_gas_price = 1_000_000_000
 # tx_pool_min_eth_tx_gas_price = 20_000_000_000
+tx_pool_min_eth_tx_gas_price = 1
 
 # Controls whether transactions exceeding half of the gas limit are allowed to be packed.
-# 
+#
 # tx_pool_allow_gas_over_half_block = false
 
 # ------------------ Storage Parameters ----------------------
@@ -635,8 +637,13 @@ tx_pool_allow_gas_over_half_block=true
 evm_transaction_block_ratio=1
 evm_transaction_gas_ratio=1
 max_packing_batch_size=10000
-max_packing_batch_gas_limit=30000000
+max_packing_batch_gas_limit=7500000
 
 genesis_accounts = "./genesis_accounts.txt"
-
 dev_allow_phase_change_without_peer = true
+tx_pool_size=2000000
+max_block_size_in_bytes=1048576
+cip130_transition_height=100000000
+min_eth_base_price=1000000000
+min_native_base_price=1000000000
+use_isolated_db_for_mpt_table = true
