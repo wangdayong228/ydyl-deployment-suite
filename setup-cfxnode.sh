@@ -29,7 +29,9 @@ ssh ubuntu@184.32.182.132 'zsh -ic "cd ~/workspace/ydyl-deployment-suite/jsonrpc
 echo "✅ [3/3] Start jsonrpc-proxy-op done"
 
 echo "🔄 [4/4] Start fund zh and xjst accounts..."
-cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x0f9B62bA159D889A9413Fd0DD742C409a9841793
-cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x4b2a49E584da4a9F7332d9877B07c0b3198B4c0E
-cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x2Ac47Df8DC45AAcc0FfBDb285477C79c54F17169
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x0f9B62bA159D889A9413Fd0DD742C409a9841793 # xr
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x4b2a49E584da4a9F7332d9877B07c0b3198B4c0E # zh
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x2Ac47Df8DC45AAcc0FfBDb285477C79c54F17169 # xr
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0xcE4CC6E76635FfAAD91a587f204011D3d3B96EB9 # dy
+cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x5E145d90C81656F151aabd5fd1ff5339AA8C95c1 # dy
 echo "✅ [4/4] Start fund zh and xjst accounts done"
