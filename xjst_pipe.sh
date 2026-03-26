@@ -312,6 +312,10 @@ get_l1_deploy_contracts() {
 ########################################
 step5_deploy_xjst_node() {
 	deploy_node_script="$DIR/xjst-work/client/deploy_node.sh"
+	local bridge_gas_price_env=()
+	if [[ -n "${BRIDGE_GAS_PRICE:-}" ]]; then
+		bridge_gas_price_env=("BRIDGE_GAS_PRICE=${BRIDGE_GAS_PRICE}")
+	fi
 
 	# 如果当前是 node-1, 则传合约地址，否则只设置 fetch_l1_from_node1 为 true
 	L2_RPC_URL="http://$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}'):30010"
@@ -326,7 +330,8 @@ step5_deploy_xjst_node() {
 	get_l1_deploy_contracts
 
 	if [[ "${NODE_ID}" == "node-1" ]]; then
-		L1_SIMPLE_CALCULATOR_ADDR="${L1_SIMPLE_CALCULATOR_ADDR}" \
+		env "${bridge_gas_price_env[@]}" \
+			L1_SIMPLE_CALCULATOR_ADDR="${L1_SIMPLE_CALCULATOR_ADDR}" \
 			L1_STATE_SENDER_ADDR="${L1_STATE_SENDER_ADDR}" \
 			L1_UNIFIED_BRIDGE_ADDR="${L1_UNIFIED_BRIDGE_ADDR}" \
 			L1_START_EPOCH="${L1_START_EPOCH}" \
@@ -339,7 +344,8 @@ step5_deploy_xjst_node() {
 			L1_ADMIN_ADDRESS="${KURTOSIS_L1_FUND_VAULT_ADDRESS}" \
 			"$deploy_node_script"
 	else
-		FETCH_L1_FROM_NODE1="false" \
+		env "${bridge_gas_price_env[@]}" \
+			FETCH_L1_FROM_NODE1="false" \
 			L1_STATE_SENDER_ADDR="${L1_STATE_SENDER_ADDR}" \
 			L1_UNIFIED_BRIDGE_ADDR="${L1_UNIFIED_BRIDGE_ADDR}" \
 			L1_START_EPOCH="${L1_START_EPOCH}" \
