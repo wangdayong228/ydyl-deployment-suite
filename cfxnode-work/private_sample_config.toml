@@ -647,3 +647,4 @@ cip130_transition_height=100000000
 min_eth_base_price=1000000000
 min_native_base_price=1000000000
 use_isolated_db_for_mpt_table = true
+jsonrpc_max_response_body_size=52428800

@@ -1,0 +1,38 @@
+x-bench-common: &bench-common
+  build:
+    context: ..
+    dockerfile: ydyl-bench-docker/Dockerfile
+  image: ydyl-bench-multijob:${BENCH_IMAGE_TAG:-local}
+  pull_policy: never
+  volumes:
+    - type: bind
+      source: ../ydyl-deploy-client/output/jobs
+      target: /app/jobs
+      read_only: false
+      bind:
+        create_host_path: false
+  working_dir: /app
+  init: true
+  restart: "no"
+  # cpus: ${BENCH_CPUS:-8.0}
+  # mem_limit: ${BENCH_MEM_LIMIT:-4g}
+  logging:
+    driver: json-file
+    options:
+      max-size: 1000m
+      max-file: "3"
+
+services:
+  multijob-1:
+    <<: *bench-common
+    command: ["./jobs/1.json", "/app/jobs"]
+  multijob-2:
+    <<: *bench-common
+    command: ["./jobs/2.json", "/app/jobs"]
+  multijob-3:
+    <<: *bench-common
+    command: ["./jobs/3.json", "/app/jobs"]
+  multijob-4:
+    <<: *bench-common
+    command: ["./jobs/4.json", "/app/jobs"]
+
