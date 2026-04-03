@@ -49,6 +49,7 @@ services:
     command: ["./jobs/8.json", "/app/jobs"]
   tps:
     <<: *bench-common
-    restart: "true"
+    restart: "unless-stopped"
+    entrypoint: ["node", "./scripts/h_TPSjob.js"]
     command: ["./jobs/all.json", "/app/jobs"]
 
