@@ -35,4 +35,20 @@ services:
   multijob-4:
     <<: *bench-common
     command: ["./jobs/4.json", "/app/jobs"]
+  multijob-5:
+    <<: *bench-common
+    command: ["./jobs/5.json", "/app/jobs"]
+  multijob-6:
+    <<: *bench-common
+    command: ["./jobs/6.json", "/app/jobs"]
+  multijob-7:
+    <<: *bench-common
+    command: ["./jobs/7.json", "/app/jobs"]
+  multijob-8:
+    <<: *bench-common
+    command: ["./jobs/8.json", "/app/jobs"]
+  tps:
+    <<: *bench-common
+    restart: "true"
+    command: ["./jobs/all.json", "/app/jobs"]
 
