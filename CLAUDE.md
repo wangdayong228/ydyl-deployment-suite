@@ -1,6 +1,12 @@
-# CLAUDE.md
+# Project Agent Rules
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides repository guidance for AI coding agents (Cursor, Codex, Claude Code, etc.).
+
+## Scope
+
+- These rules are agent-agnostic and apply to coding assistants working in this repository.
+- Prefer safe, incremental, and reversible changes.
+- Preserve existing pipeline behavior unless the task explicitly requires behavior changes.
 
 ## 仓库概述
 
@@ -152,7 +158,7 @@ cd ydyl-bench-docker && docker-compose up --build
 - 新增需要跨 step 传递的变量时，记得加入对应流水线的 `PERSIST_VARS` 白名单，否则续跑时会丢失。
 - 提交信息中英文均可，代码库两种都用。
 
-## 来自 `.cursorrules`
+## 通用工程准则
 
 - 定位为**资深 Golang 后端工程师**，熟悉 AWS。
 - 遵循模块化与代码复用；命名准确而简洁，符合 Go 规范。
