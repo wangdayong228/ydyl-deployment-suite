@@ -78,9 +78,11 @@ init_network_vars() {
 	ENCLAVE_NAME="${ENCLAVE_NAME:-xjst-gen}"
 	NETWORK="${NETWORK:-${ENCLAVE_NAME#xjst-}}" # 移除 "xjst-" 前缀
 	# shellcheck disable=SC2034
+	# 注：该默认值仅为兜底；main() 中会在调用本函数前把 L2_RPC_URL 固定为 http://127.0.0.1/l2rpc，
+	# 真正生效的 L2_RPC_URL 会在 step5_deploy_xjst_node 中被覆盖为 http://<local-ip>:30010。
 	L2_RPC_URL="http://127.0.0.1/l2rpc"
-	# OP 类型
-	L2_TYPE="${L2_TYPE:-1}"
+	# XJST 类型：默认 2；注意 main() 会在调用本函数之前显式设置 L2_TYPE=2，因此这里的 :-1 实际上不会生效。
+	L2_TYPE="${L2_TYPE:-2}"
 	export L2_TYPE
 }
 
@@ -224,8 +226,8 @@ require_inputs() {
 	for v in "${required_vars[@]}"; do
 		require_var "$v" || return 1
 	done
-	# 注意：KURTOSIS_L1_VAULT_PRIVATE_KEY 不再默认与 L1_VAULT_PRIVATE_KEY 绑定；
-	# 若未设置，会在 gen_op_enclave_deploy_accounts 中自动生成随机值。
+	# 注意：XJST 里 KURTOSIS_L1_VAULT_PRIVATE_KEY 直接复用 L1_VAULT_PRIVATE_KEY（见 gen_xjst_deploy_accounts），
+	# 用户无需单独设置；与 OP 流水线不同，这里不做随机生成。
 }
 
 parse_start_step_and_export_restored() {
@@ -238,34 +240,8 @@ parse_start_step_and_export_restored() {
 	if [[ -n "${L2_TYPE:-}" ]]; then export L2_TYPE; fi
 }
 
-# ########################################
-# # STEP3: 启动 jsonrpc-proxy（L1/L2 RPC 代理） - OP 专属
-# ########################################
-# step3_start_jsonrpc_proxy() {
-#     if [[ "${ENABLE_L1_RPC_RROXY:-}" = "true" ]]; then
-#         echo "🔹 跳过启动 jsonrpc-proxy, 直接使用 L1_RPC_URL 作为 L1_RPC_URL_PROXY"
-#         L1_RPC_URL_PROXY=$L1_RPC_URL
-#         export L1_RPC_URL_PROXY
-#         return 0
-#     fi
-
-#     cd "$DIR"/jsonrpc-proxy || return 1
-#     # shellcheck disable=SC2153
-#     cat >.env_op <<EOF
-# CORRECT_BLOCK_HASH=true
-# LOOP_CORRECT_BLOCK_HASH=true
-# PORT=3030
-# JSONRPC_URL=$L1_RPC_URL
-# L2_RPC_URL=$L2_RPC_URL
-# EOF
-#     npm i
-#     npm run start:op
-#     L1_RPC_URL_PROXY=http://$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}'):3030
-#     export L1_RPC_URL_PROXY
-# }
-
 ########################################
-# STEP3: 部署 l1 合约 - XJST 专属
+# STEP4: 部署 l1 合约 - XJST 专属（仅 node-1 执行；函数名保留历史命名，run_all_steps 中以 run_step 4 调度）
 ########################################
 step3_deploy_l1_contracts() {
 	if [[ "${NODE_ID}" != "node-1" ]]; then
@@ -318,7 +294,7 @@ get_l1_deploy_contracts() {
 }
 
 ########################################
-# STEP4: 部署 kurtosis op - OP 专属
+# STEP5: 部署 xjst 节点 - XJST 专属（node-1 传入 L1 合约地址，其他节点仅启动节点服务）
 ########################################
 step5_deploy_xjst_node() {
 	deploy_node_script="$DIR/xjst-work/client/deploy_node.sh"
@@ -396,20 +372,11 @@ step_fund_xjst_l2_accounts() {
 }
 
 ########################################
-# STEP6: 生成 OP 相关 env（op-work/scripts 下生成，再拷贝到服务目录） - OP 专属
+# STEP8: 直接生成 counter-bridge-register 所需 .env - XJST 专属
+# 与 CDK/OP 不同，XJST 不经由 *-work/scripts/gen-*-env.sh，而是在此直接写文件。
+# 函数名保留历史命名，run_all_steps 中以 run_step 8 调度。
 ########################################
 step6_gen_counter_bridge_register_env() {
-	# "$DIR/op-work/scripts/gen-op-claim-service-env.sh" "$ENCLAVE_NAME"
-
-	# require_file "$DIR/op-work/output/op-claim-service.env"
-	# require_file "$DIR/op-work/output/op-counter-bridge-register.env"
-
-	# mkdir -p "$DIR/op-claim-service" || return 1
-	# cp "$DIR/op-work/output/op-claim-service.env" "$DIR/op-claim-service/.env"
-
-	# mkdir -p "$DIR/zk-claim-service" || return 1
-	# cp "$DIR/op-work/output/op-counter-bridge-register.env" "$DIR/zk-claim-service/.env.counter-bridge-register"
-
 	echo "L1_RPC_URL=${L1_RPC_URL}
 L2_RPC_URL=${L2_RPC_URL}
 BRIDGES=${L1_UNIFIED_BRIDGE_ADDR},${L1_STATE_SENDER_ADDR}
@@ -451,7 +418,7 @@ run_all_steps() {
 	# 等待其它节点启动完成后，再执行后续步骤
 	run_step 7 "等待其它节点启动完成后，再执行后续步骤" step_wait_for_other_nodes_to_start
 
-	run_step 8 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_counter_bridge_register_env
+	run_step 8 "生成 counter-bridge-register .env 文件" step6_gen_counter_bridge_register_env
 	run_step 9 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
 	run_step 10 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
 	run_step 11 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
@@ -460,8 +427,8 @@ run_all_steps() {
 }
 
 main() {
-	# ENABLE_L1_RPC_RROXY=false
-	# KURTOSIS_L1_FUND_VAULT_ADDRESS="0x0000000000000000000000000000000000000000"
+	# XJST 固定网络参数（无论用户传入都会被覆盖）：
+	#   L2_CHAIN_ID=0, L2_TYPE=2
 	L2_CHAIN_ID=0
 	L2_TYPE=2
 

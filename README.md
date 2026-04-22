@@ -38,10 +38,13 @@ git submodule update --init --recursive
 - `ip`
 - `npm`
 - `yarn`
+- `openssl`（OP 流水线生成随机私钥用）
+- `curl`（XJST 流水线调用 `ydyl-console-service` 用）
+- `python3`（XJST 部署 L1 合约用，首次运行会创建 `.venv` 安装 `web3`/`eth-account`）
 - `docker`
 - `docker-compose`
-- `kurtosis`
-- `aws`
+- `kurtosis`（CDK / OP 部署）
+- `aws`（`ydyl-deploy-client` 批量创建 EC2 用）
 
 环境初始化相关脚本：
 
@@ -57,8 +60,8 @@ git submodule update --init --recursive
 
 | 脚本 | 作用 | 状态文件 | 主要输出 |
 | --- | --- | --- | --- |
-| `cdk_pipe.sh` | 部署并启动 CDK / ZK L2 全链路 | `output/cdk_pipe.state` | `cdk-work/output/`、`output/<enclave>-meta.json`、`output/counter-bridge-register-result-<network>.json` |
-| `op_pipe.sh` | 部署并启动 OP Stack L2 全链路 | `output/op_pipe.state` | `op-work/output/`、`output/<enclave>-meta.json`、`output/counter-bridge-register-result-<network>.json` |
+| `cdk_pipe.sh` | 部署并启动 CDK / ZK L2 全链路 | `output/cdk_pipe.state` | `cdk-work/output/deploy-result-<network>.json`、`output/<enclave>-meta.json`、`output/counter-bridge-register-result-<network>.json` |
+| `op_pipe.sh` | 部署并启动 OP Stack L2 全链路 | `output/op_pipe.state` | `op-work/output/op-deployer-configs-<enclave>/wallets.json`、`output/<enclave>-meta.json`、`output/counter-bridge-register-result-<network>.json` |
 | `xjst_pipe.sh` | 部署并启动 XJST L2 与相关桥接配置 | `output/xjst_pipe.state` | `xjst-work/output/`、`output/<enclave>-meta.json`、`output/counter-bridge-register-result-<network>.json` |
 
 ## 快速开始
@@ -154,7 +157,7 @@ CDK 特有点：
 
 ### `op_pipe.sh`
 
-默认步骤与 CDK 基本一致，也是 12 个 step，但第 4、6、8 步为 OP 专属实现：
+默认步骤与 CDK 基本一致，也是 12 个 step，但第 3、4、6、8 步为 OP 专属实现（step3 的 OP 版本多了 `ENABLE_L1_RPC_RROXY` 的跳过分支）：
 
 1. 初始化身份和密钥
 2. 从 `L1_VAULT_PRIVATE_KEY` 转账 L1 ETH
@@ -198,13 +201,15 @@ XJST 的编排与 CDK / OP 不同。
 11. 收集元数据
 12. 检查 PM2 进程健康
 
-当 `NODE_ID!=node-1` 时，脚本会走精简路径，只部署当前节点。
+当 `NODE_ID!=node-1` 时，脚本会走精简路径，仅执行一步 `step5_deploy_xjst_node`（此时 `START_STEP` 只能为 1）。
 
 XJST 特有点：
 
-- 脚本在 `main()` 中直接固定：
+- 脚本在 `main()` 中直接固定（即便用户显式传入也会被覆盖）：
   - `L2_CHAIN_ID=0`
   - `L2_TYPE=2`
+- `L2_VAULT_PRIVATE_KEY` 被硬编码为固定私钥（`xjst_pipe.sh` 的 `gen_xjst_deploy_accounts`），用户传入同样会被覆盖
+- `KURTOSIS_L1_VAULT_PRIVATE_KEY` 直接复用 `L1_VAULT_PRIVATE_KEY`，不会另外生成（与 OP 不同）
 - 需要额外提供：
   - `L1_RPC_URL_WS`
   - `CHAIN_NODE_IPS`
@@ -272,14 +277,18 @@ make clean
 说明：
 
 - `ENABLE_GEN_ACC` 虽然是开关，但当前脚本要求它必须有值，通常填 `true` 或 `false`
-- `L2_PRIVATE_KEY`、`CLAIM_SERVICE_PRIVATE_KEY`、`KURTOSIS_L1_PREALLOCATED_MNEMONIC` 等通常由 step1 自动生成
+- `L2_PRIVATE_KEY`、`CLAIM_SERVICE_PRIVATE_KEY` 由 step1 (`step1_init_identities`) 自动生成
+- `KURTOSIS_L1_PREALLOCATED_MNEMONIC` 的生成位置按流水线不同：
+  - CDK：step1 生成
+  - OP：在 step1 与 step2 之间的 `gen_op_enclave_deploy_accounts()` 生成
+  - XJST：不使用该助记词（直接以 `L1_VAULT_PRIVATE_KEY` 作为 `KURTOSIS_L1_VAULT_PRIVATE_KEY`）
 
 ### OP 常用可选变量
 
 - `ENCLAVE_NAME`，默认 `op-gen`
-- `KURTOSIS_L1_VAULT_PRIVATE_KEY`
-- `KURTOSIS_L1_PREALLOCATED_MNEMONIC`
-- `ENABLE_L1_RPC_RROXY`
+- `KURTOSIS_L1_VAULT_PRIVATE_KEY`：若未设置，`gen_op_enclave_deploy_accounts()` 会用 `openssl rand -hex 32` 生成随机私钥
+- `KURTOSIS_L1_PREALLOCATED_MNEMONIC`：若未设置，`gen_op_enclave_deploy_accounts()` 会用 `cast wallet new-mnemonic` 自动生成
+- `ENABLE_L1_RPC_RROXY`：`run_all_steps()` 默认设为 `true`，因此 OP 流水线默认不会真正启动 `jsonrpc-proxy`
 - `DRYRUN`
 
 ### CDK 常用可选变量
@@ -321,6 +330,9 @@ make clean
 | `ydyl-gen-accounts/` | Hardhat / TypeScript | 批量生成账户、充值、并发压测 |
 | `ydyl-bench-docker/` | Docker Compose | 基于 jobs 配置启动 8 个压测发送容器和 1 个 TPS 监控容器 |
 | `cfxnode-work/` | 运维脚本 / 配置 | fullnode 相关环境准备与辅助文件 |
+| `tools/` | 杂项脚本 | 临时性运维 / 调试工具 |
+| `doc-report/` | 文档 | 报告、调研与设计文档 |
+| `install-env.sh`、`install-zsh.sh`、`setup-cfxnode.sh` | Bash | 部署机环境初始化与 fullnode 重置修复 |
 
 ## 常用开发命令
 
@@ -329,10 +341,15 @@ make clean
 ```bash
 cd jsonrpc-proxy
 npm i
-npm run start:cdk
-npm run start:op
-npm test
+npm run start:cdk   # 通过 PM2 启动，进程名 jsonrpc-proxy-cdk，读取 .env_cdk
+npm run start:op    # 通过 PM2 启动，进程名 jsonrpc-proxy-op，读取 .env_op
+npm test            # mocha 测试
 ```
+
+说明：
+
+- `start:cdk` / `start:op` 实际执行 `pm2 start "... node ./index.js"`，不是直接前台运行 Node。
+- 停止请使用 `pm2 stop jsonrpc-proxy-cdk` 或 `pm2 delete <name>`。
 
 ### `zk-claim-service`
 
@@ -356,7 +373,7 @@ yarn logs
   - `l1-l2-proofFetcher`
   - `l1-l2-transactionSender`
   - `l1-l2-transactionSenderBalanceCheck`
-- 它不只是部署脚本目录，还是和 `op-claim-service` 类似的长期运行服务
+- `zk-claim-service` 本身就是长期运行的跨域消息中继服务（与 `op-claim-service` 对应），同时承载 Counter 部署 / bridge 注册 / 压测脚本
 - 另外还包含压测与 TPS 统计脚本，重点是：
   - `scripts/7s_multijob.js`
     - 作用：读取 jobs 配置并并发发送跨链交易
@@ -406,16 +423,23 @@ go run . deploy -f config.deploy.yaml
 go run . gen-cross-tx-config --servers ./output/servers.json --config ./config.deploy.yaml
 ```
 
-主命令说明：
+主要子命令（完整列表见 `ydyl-deploy-client --help`）：
 
 - `deploy`
   - 作用：批量创建 EC2、等待 SSH、远程执行部署命令
   - 常见产物：`output/servers.json`、`output/script_status.json`、`output/servers_create.json`
+- `deploy-restore`：基于已有 `servers.json` 重新触发远端部署脚本
 - `gen-cross-tx-config`
-  - 说明：这是你说的 `gen-tx-config` 对应的真实 CLI 子命令名
   - 作用：读取 `servers.json`，再从各链节点的 `ydyl-console-service` 拉取 RPC 和合约信息，生成 `zk-claim-service/scripts/7s_multijob.js` 所需 jobs
   - 默认输出：`<servers 所在目录>/jobs/all.json` 和 `jobs/1.json ~ jobs/N.json`
   - 默认拆分份数：8
+- `waitssh`：等待指定主机 SSH 就绪
+- `sync`：向远端主机同步文件 / 脚本
+- `shutdown`：批量停机 / 终止实例
+- `monitor-gen-accounts`：远端观察 `ydyl-gen-accounts` 进度
+- `bench-cross-tx`：批量触发跨链压测
+- `tps`：拉取并汇总各节点 TPS
+- `setup-cfxnode`：远端执行 `setup-cfxnode.sh` 的对应逻辑
 
 典型顺序：
 
