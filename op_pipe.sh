@@ -11,6 +11,7 @@ set -Eueo pipefail
 #        L1 主资金账户私钥（用于给部署相关账户转 L1 ETH）
 #    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用）
 #    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
+#    - ENABLE_GEN_ACC: 是否执行 step9 生成账户（必须显式传 true/false）
 #
 # 2. 可选传入（可覆盖默认）的环境变量：
 #    - ENCLAVE_NAME: kurtosis enclave 名（默认 op-gen）
@@ -19,6 +20,7 @@ set -Eueo pipefail
 #    - YDYL_SCRIPTS_LIB_DIR: 脚本库路径（默认 $DIR/ydyl-scripts-lib）
 #    - DRYRUN: true 时只打印不转账/不执行链上操作（由 step 函数读取）
 #    - ENABLE_L1_RPC_RROXY: true 时跳过 jsonrpc-proxy，直接用 L1_RPC_URL 作为 L1_RPC_URL_PROXY（变量名历史拼写保留）
+#      当前 run_all_steps() 默认会把它设为 true，因此 OP 流水线通常不会真正启动 jsonrpc-proxy
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
 #    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1/生成函数自动生成（kurtosis 预分配账户助记词）
@@ -28,13 +30,13 @@ set -Eueo pipefail
 #    - L2_ADDRESS: 由 L2_PRIVATE_KEY 推导（用于 step5 接收 L2 充值）
 #    - L1_RPC_URL_PROXY: step3 启动 jsonrpc-proxy 后生成（用于 kurtosis deploy）
 #    - L2_VAULT_PRIVATE_KEY: step4 从 op deploy 产物 wallets.json 解析（用于 step5 给 L2 账户充值）
-# 2. 步骤控制：
+# 4. 步骤控制：
 #    - 默认：从上次完成步骤的下一步开始执行（读取 output/op_pipe.state）
 #    - 指定起始步骤：
 #        START_STEP=3 ./op_pipe.sh
 #      或：
 #        ./op_pipe.sh 3
-# 3. 状态与环境变量持久化：
+# 5. 状态与环境变量持久化：
 #    - 关键变量会写入 output/op_pipe.state
 #    - 脚本启动时自动 source 该文件，实现从中间步骤续跑
 ########################################

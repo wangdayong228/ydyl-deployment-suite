@@ -10,6 +10,7 @@ set -Eueo pipefail
 #    - L1_VAULT_PRIVATE_KEY: L1 主资金账户私钥（用于给部署相关账户转 L1 ETH）
 #    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用）
 #    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
+#    - ENABLE_GEN_ACC: 是否执行 step9 生成账户（必须显式传 true/false）
 #
 # 2. 可选传入（可覆盖默认）的环境变量：
 #    - ENCLAVE_NAME: kurtosis enclave 名（默认 cdk-gen）
@@ -28,7 +29,7 @@ set -Eueo pipefail
 #    - L2_ADDRESS: 由 L2_PRIVATE_KEY 推导（用于 step5 接收 L2 充值）
 #    - L1_RPC_URL_PROXY: step3 启动 jsonrpc-proxy 后生成（用于 kurtosis deploy）
 #    - 其他产物：L2_VAULT_PRIVATE_KEY、METADATA_FILE、COUNTER_BRIDGE_REGISTER_RESULT_FILE 等在运行过程中生成/写入
-# 2. 步骤控制：
+# 4. 步骤控制：
 #    - 默认：从上次完成步骤的下一步开始执行（读取 output/cdk_pipe.state）
 #    - 指定起始步骤：
 #        START_STEP=3 ./cdk_pipe.sh
@@ -36,7 +37,7 @@ set -Eueo pipefail
 #        ./cdk_pipe.sh 3
 #    - 彻底重来（包括环境变量与状态）：
 #        rm output/cdk_pipe.state && ./cdk_pipe.sh
-# 3. 状态与环境变量持久化：
+# 5. 状态与环境变量持久化：
 #    - 关键变量会写入 output/cdk_pipe.state
 #    - 脚本启动时自动 source 该文件，实现从中间步骤续跑
 ########################################

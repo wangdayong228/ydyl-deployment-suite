@@ -6,37 +6,47 @@ set -Eueo pipefail
 # 使用说明（简要）
 # 1. 必须传入（用户提供）的环境变量：
 #    - L1_CHAIN_ID: L1 链 chain id（用于部署/元数据记录/区分网络）
-#    - L2_CHAIN_ID: L2 链 chain id（用于部署/元数据记录/区分网络）
-#    - L1_RPC_URL: 连接 L1 的 RPC 地址（用于 L1 转账、以及 jsonrpc-proxy 上游）
-#    - L1_VAULT_PRIVATE_KEY（或 KURTOSIS_L1_VAULT_PRIVATE_KEY 二选一）:
-#        L1 主资金账户私钥（用于给部署相关账户转 L1 ETH；同时用于推导 KURTOSIS_L1_FUND_VAULT_ADDRESS）
+#    - L1_RPC_URL: 连接 L1 的 HTTP RPC 地址（用于转账、部署 L1 合约、写入元数据）
+#    - L1_RPC_URL_WS: 连接 L1 的 WS RPC 地址（用于 xjst 节点部署时透传给脚本）
+#    - L1_VAULT_PRIVATE_KEY:
+#        L1 主资金账户私钥（用于给部署相关账户转 L1 ETH；xjst 中也会直接作为 KURTOSIS_L1_VAULT_PRIVATE_KEY 使用）
 #    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用）
 #    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
+#    - CHAIN_NODE_IPS: xjst 节点 IP 列表（格式如 [ip1,ip2,ip3,ip4]）
+#    - NODE_ID: 当前节点标识（如 node-1 / node-2 / node-3 / node-4）
+#    - GROUP_ID: xjst group id
+#    - ENABLE_GEN_ACC: 是否执行 step10 生成账户（必须显式传 true/false）
 #
 # 2. 可选传入（可覆盖默认）的环境变量：
 #    - ENCLAVE_NAME: kurtosis enclave 名（默认 xjst-gen）
-#    - L2_TYPE: L2 类型编号（默认 1=op；会传递给注册脚本）
-#    - L2_RPC_URL: L2 RPC（默认 http://127.0.0.1/l2rpc；由 kurtosis 暴露到本机）
 #    - YDYL_SCRIPTS_LIB_DIR: 脚本库路径（默认 $DIR/ydyl-scripts-lib）
 #    - DRYRUN: true 时只打印不转账/不执行链上操作（由 step 函数读取）
-#    - ENABLE_L1_RPC_RROXY: true 时跳过 jsonrpc-proxy，直接用 L1_RPC_URL 作为 L1_RPC_URL_PROXY（变量名历史拼写保留）
+#    - BRIDGE_GAS_PRICE: 透传给 xjst-work/client/deploy_node.sh 的桥交易 gas price
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
-#    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1/生成函数自动生成（kurtosis 预分配账户助记词）
-#    - KURTOSIS_L1_FUND_VAULT_ADDRESS: 由 L1_VAULT_PRIVATE_KEY 推导（用于 step2 接收 L1 资金）
+#    - L2_CHAIN_ID: 在 main() 中固定为 0，无需手动传入
+#    - L2_TYPE: 在 main() 中固定为 2（xjst），无需手动传入
+#    - KURTOSIS_L1_VAULT_PRIVATE_KEY: 由 L1_VAULT_PRIVATE_KEY 派生得到（xjst 直接复用同一把 L1 私钥）
+#    - KURTOSIS_L1_FUND_VAULT_ADDRESS: 由 KURTOSIS_L1_VAULT_PRIVATE_KEY 推导（用于 step2 接收 L1 资金）
 #    - CLAIM_SERVICE_PRIVATE_KEY: step1 自动生成（claim-service EOA）
 #    - L2_PRIVATE_KEY: step1 自动生成（用途：L2 部署 Counter、ydyl-gen-accounts 付款/部署账户）
 #    - L2_ADDRESS: 由 L2_PRIVATE_KEY 推导（用于 step5 接收 L2 充值）
-#    - L1_RPC_URL_PROXY: step3 启动 jsonrpc-proxy 后生成（用于 kurtosis deploy）
-#    - L2_VAULT_PRIVATE_KEY: step4 从 op deploy 产物 wallets.json 解析（用于 step5 给 L2 账户充值）
-# 2. 步骤控制：
-#    - 默认：从上次完成步骤的下一步开始执行（读取 output/op_pipe.state）
+#    - L2_VAULT_PRIVATE_KEY: xjst 中使用固定私钥（用于 step6 给 L2 账户充值）
+#    - L2_RPC_URL: step5 部署节点后推导为本机的 http://<local-ip>:30010
+#    - L1_SIMPLE_CALCULATOR_ADDR / L1_STATE_SENDER_ADDR / L1_UNIFIED_BRIDGE_ADDR / L1_START_EPOCH:
+#        node-1 在 step4 部署或 step5 查询后得到，并供后续节点部署与 bridge 注册使用
+# 4. 步骤控制：
+#    - 默认：从上次完成步骤的下一步开始执行（读取 output/xjst_pipe.state）
 #    - 指定起始步骤：
-#        START_STEP=3 ./op_pipe.sh
+#        START_STEP=3 ./xjst_pipe.sh
 #      或：
-#        ./op_pipe.sh 3
-# 3. 状态与环境变量持久化：
-#    - 关键变量会写入 output/op_pipe.state
+#        ./xjst_pipe.sh 3
+# 5. 执行行为：
+#    - 当 NODE_ID=node-1 时，执行完整 12 步流水线
+#    - 当 NODE_ID!=node-1 时，仅执行 xjst 节点部署相关精简路径
+#    - 首次运行会在仓库根目录创建 .venv 并安装 Python 依赖（web3 / eth-account）
+# 6. 状态与环境变量持久化：
+#    - 关键变量会写入 output/xjst_pipe.state
 #    - 脚本启动时自动 source 该文件，实现从中间步骤续跑
 ########################################
 
