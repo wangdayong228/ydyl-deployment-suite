@@ -314,7 +314,7 @@ make clean
 | `xjst-work/` | Bash / Python / Node | XJST 节点部署与多节点协同 |
 | `ydyl-scripts-lib/` | Bash 公共库 | 通用 step、状态持久化、错误处理、部署骨架 |
 | `jsonrpc-proxy/` | Node.js + Koa + SQLite | L1/L2 RPC 代理与区块哈希修正 |
-| `zk-claim-service/` | Node.js + Hardhat + PM2 | ZK 消息监听、proof 获取、交易中继服务，同时承载 Counter / bridge 注册与压测脚本 |
+| `zk-claim-service/` | Node.js + Hardhat + PM2 | ZK 消息监听、proof 获取、交易中继服务，同时承载 `Counter` / bridge 注册、跨链压测、跨链 TPS 监控脚本 |
 | `op-claim-service/` | Node.js + PM2 | OP L2 -> L1 消息监听、proof 生成与中继服务 |
 | `ydyl-console-service/` | Go + Gin | 部署结果、状态与链信息 HTTP API |
 | `ydyl-deploy-client/` | Go + Cobra | AWS EC2 批量部署、生成跨链压测 jobs、远程执行与日志收集 |

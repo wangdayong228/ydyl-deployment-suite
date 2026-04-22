@@ -59,7 +59,7 @@ rm output/cdk_pipe.state && ./cdk_pipe.sh
 | `cdk-work` / `op-work` / `xjst-work` | Bash + Nginx 配置 | 特定 L2 的部署脚本与模板；被流水线的 step4/step6/step7 调用 |
 | `ydyl-scripts-lib` | 共享 Bash 库 | `utils.sh`、`pipeline_utils.sh`、`pipeline_steps_lib.sh`、`deploy_common.sh` — 三条流水线的公共步骤都在这里 |
 | `jsonrpc-proxy` | Koa (Node.js) | L1/L2 RPC 代理，带 SQLite 日志和区块哈希修正，流水线 step3 启动 |
-| `zk-claim-service` | Node.js + PM2 | 监听 ZK 跨域消息，拉取 ZK proof 并在 L1 发交易 |
+| `zk-claim-service` | Node.js + Hardhat + PM2 | 监听 ZK 跨域消息，拉取 ZK proof 并在 L1 发交易，同时承载 `Counter` / bridge 注册、跨链压测、跨链 TPS 监控脚本 |
 | `op-claim-service` | Node.js + PM2 | 监听 OP 跨域消息，生成证明并中继到 L1 |
 | `ydyl-console-service` | Go + Gin | 监控部署状态、链元数据的 HTTP API |
 | `ydyl-deploy-client` | Go + Cobra | 批量创建 EC2 实例、远程执行部署命令、收集日志 |
