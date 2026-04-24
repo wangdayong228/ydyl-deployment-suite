@@ -6,3 +6,4 @@ logs
 .cache
 .DS_Store
 doc-report
+node_modules
