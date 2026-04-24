@@ -1,2 +1,4 @@
-1. cfxnode 节点 34.219.245.189 ~/jsscripts 是跨空间转账，放到 setup-cfxnode.sh 执行
-2. deploy-restore 时 running 的只 sync，只有 failed 的才执行部署命令
+- [x] 1. cfxnode 节点 34.219.245.189 ~/jsscripts 是跨空间转账，放到 setup-cfxnode.sh 执行
+- [x] 2. deploy-restore 时 running 的只 sync，只有 failed 的才执行部署命令
+- [x] 3. gen-priavte-key 同时输出地址，l2type=0/1 输出以太坊地址；l2type=2 则输出 xjst 地址，xjst 地址格式为将以太坊地址的首个字符置为 1，比如以太坊地址为 “0xf4f23958eab8ddb306dac204859910082bcdcf12”， 则 xjst 地址为“0x14f23958eab8ddb306dac204859910082bcdcf12”
+- [ ] 4. ydyl-deploy-client 增加命令 check-alive 统一检查所有链运行输出是否正常，输出 block number、timestamp、emoji 表示 正常/异常
