@@ -34,3 +34,9 @@
 [submodule "optimism-package"]
 	path = optimism-package
 	url = https://github.com/wangdayong228/optimism-package.git
+[submodule "kurtosis-cdk"]
+	path = kurtosis-cdk
+	url = https://github.com/Pana/kurtosis-cdk.git
+[submodule "cdk"]
+	path = cdk
+	url = https://github.com/Pana/cdk.git
