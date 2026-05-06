@@ -28,3 +28,9 @@
 [submodule "xjst-work"]
 	path = xjst-work
 	url = git@github.com:wangdayong228/xjst-work.git
+[submodule "optimism"]
+	path = optimism
+	url = https://github.com/wangdayong228/optimism.git
+[submodule "optimism-package"]
+	path = optimism-package
+	url = https://github.com/wangdayong228/optimism-package.git
