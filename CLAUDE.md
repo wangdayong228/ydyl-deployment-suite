@@ -162,3 +162,37 @@ cd ydyl-bench-docker && docker-compose up --build
 
 - 定位为**资深 Golang 后端工程师**，熟悉 AWS。
 - 遵循模块化与代码复用；命名准确而简洁，符合 Go 规范。
+
+## Superpowers 工作流约定
+
+### 文档位置
+
+- specs: `docs/superpowers/specs/YYYY-MM-DD-<feature>.md`
+- plans: `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
+- 索引: `docs/superpowers/INDEX.md`
+
+### 工作纪律
+
+#### 改动来源判断
+
+任何改动开始前，先确定属于哪个 feature，找到对应的 spec：
+- 看 INDEX.md 找到当前任务对应的 spec
+- 如果改动跨多个 spec，明确列出涉及哪些
+
+#### spec 是真理之源
+
+- 改动涉及需求/设计 → 先改 spec，再改产物
+- 改动是纯实施细节 → 改产物，但完成后扫一遍 spec 确认仍一致
+- spec 与产物不一致 → 视为 bug，必须修复
+
+#### 跨 feature 影响
+
+- 改动可能影响其他 feature 时，主动列出受影响的 spec 让我确认
+- 不要默默修改其他 feature 的代码而不更新对应 spec
+
+#### 完成检查
+
+每个任务完成前必须：
+1. 列出本次改动涉及哪些 spec/plan/产物
+2. 确认它们之间一致
+3. 如果索引（INDEX.md）需要更新，一并更新

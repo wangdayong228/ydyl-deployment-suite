@@ -21,7 +21,7 @@
   ...
 ```
 
-**本节职责**：论证 OP Stack（乐观 Rollup）和 CDK zkEVM（ZK Rollup）两种主流 Rollup 框架接入 Conflux eSpace 作为 L1 的技术方案，重点在兼容性适配的设计决策和工程实现，不承担对两种 Rollup 原理的介绍，也不承担部署自动化（4.4 节）的内容。
+**本节职责**：论证 OP Stack（乐观 Rollup）和 CDK zkEVM（ZK Rollup）两种主流 Rollup 框架接入 Conflux eSpace 作为 L1 的技术方案，重点在兼容性适配的设计决策和工程实现。不承担对两种 Rollup 原理的介绍，也不承担部署自动化（4.4 节）的内容。
 
 **读者预设**：同领域评审专家，了解 OP Stack 和 ZK Rollup 的基本架构，但不了解 Conflux eSpace 的内部机制，也不了解本项目的具体改动。
 
@@ -32,29 +32,39 @@
 ```
 4.2 Rollup 侧链接入方案
 │
-├── 4.2.1  接入挑战：Conflux eSpace 与 Ethereum 的区块哈希不兼容性
+├── 4.2.1  接入挑战：Conflux eSpace 与标准 Ethereum L1 的五类兼容性差异
+│          C1. 区块哈希算法不兼容（最普遍，贯穿两套框架）
+│          C2. EVM 执行层行为差异（gas 计算）
+│          C3. L1 区块生产速率差异（影响 L2 出块连续性）
+│          C4. 交易类型与 Gas 机制限制（EIP-4844 缺失）
+│          C5. CDK 架构外部依赖缺失（Agglayer）
 │
-├── 4.2.2  两层适配总体方案设计
+├── 4.2.2  总体适配方案设计
+│          · 问题-方案映射总览
+│          · 区块哈希问题的双层方案论证（代理层 + 内核降级）
+│          · 其余四类问题的独立方案概述
 │
 ├── 4.2.3  RPC 代理层：jsonrpc-proxy 设计与实现
+│          （专门解决 C1 的 RPC 侧 + RPC API 兼容性）
 │
 ├── 4.2.4  OP Stack 接入适配
-│          A. L1 数据接入适配（calldata 强制模式 + L1 origin 追赶机制）
-│          B. 区块哈希校验降级（推导管线 + 数据完整性验证）
-│          C. 提现路径适配（checkMinGas 合约修改 + 提现时间配置）
-│          D. 运行稳定性修复（GameAlreadyExists + blobFee 空值）
+│          A. 区块哈希校验降级（C1 的内核侧，6 处）
+│          B. L1 数据接入适配（C3 L1 origin 追赶 + C4 calldata 强制）
+│          C. EVM 执行层适配（C2：FloorDataGas + checkMinGas 合约修改）
+│          D. 运行稳定性修复（blobFee 空值 + GameAlreadyExists）
 │
 └── 4.2.5  CDK zkEVM 接入适配
-           A. 架构配置适配（Agglayer 关闭 + SettlementBackend 切换）
-           B. 区块哈希同步适配（evmdownloader block hash 覆盖）
-           C. 运行稳定性修复（ethtx-manager 死循环 + 合约部署脚本）
+           A. 架构依赖适配（C5：Agglayer 关闭 + SettlementBackend 切换）
+           B. 区块哈希同步适配（C1 的内核侧，evmdownloader）
+           C. 运行稳定性修复（ethtx-manager 死循环 + 部署脚本）
 ```
 
-节间逻辑链：
-- 4.2.1 精确定义问题，所有后续改动的存在都源于这里
-- 4.2.2 建立双层适配框架，给 4.2.3/4.2.4/4.2.5 各自定位
-- 4.2.3 是公共基础层，论述完毕后 4.2.4/4.2.5 各自引用它
-- 4.2.4 和 4.2.5 并列但不重复，各自聚焦 Rollup 框架专有的适配
+**节间逻辑链**：
+- 4.2.1 完整枚举五类根因，是后续所有适配工作的起点
+- 4.2.2 建立问题-方案的总体对应关系，给 4.2.3/4.2.4/4.2.5 各自定位
+- 4.2.3 是五类问题中 C1 的 RPC 层解法（公共基础层）
+- 4.2.4 是 C1–C4 在 OP Stack 框架内的内核层解法
+- 4.2.5 是 C1、C5 在 CDK 框架内的解法
 
 ---
 
@@ -62,216 +72,277 @@
 
 ---
 
-### 4.2.1 接入挑战：Conflux eSpace 与 Ethereum 的区块哈希不兼容性
+### 4.2.1 接入挑战：Conflux eSpace 与标准 Ethereum L1 的五类兼容性差异
 
-**本节目标**：让读者在看到任何解决方案之前，先理解问题本身的精确边界，以及为什么这个问题会同时影响两套独立的 Rollup 框架。
+**本节目标**：在任何解决方案出现之前，让读者建立完整的问题地图——理解"为什么接入 Conflux eSpace 作为 L1 需要如此广泛的适配工作"，以及各类问题的严重程度和影响范围。
 
-**核心论点**：使用 Conflux eSpace 作为 Rollup L1 的根本障碍是区块哈希算法不兼容。Conflux eSpace 提供 Ethereum 兼容的 JSON-RPC 接口，但其区块哈希不按 Ethereum 标准计算（对区块头 RLP 编码后取 Keccak-256），导致任何从 Conflux 获取区块数据后本地重算哈希的操作都会失败。
+**核心论点**：Conflux eSpace 提供 Ethereum 兼容的 RPC 接口，但在区块哈希算法、EVM 执行行为、网络特性和上层服务架构四个维度上存在实质性差异，这些差异分别引发了不同层次的适配需求，且相互独立——解决任何一类都不能消除其余类的影响。
 
 **需要写出来的内容**：
 
-1. **问题的技术本质（一段，约 200 字）**  
-   Conflux eSpace 的区块头包含 Tree-Graph 共识专有字段（如 `espaceGasLimit`），这些字段不在以太坊 EIP-3675 定义的区块头结构中。Ethereum 客户端在做 RLP 编码时只处理标准字段，因此本地重算得到的哈希与 Conflux 节点内部计算的哈希不同。这一差异不是偶发的，而是结构性的——只要 Conflux 区块头的字段集合与 Ethereum 不完全一致，任何依赖本地重算哈希的校验就必然失败。
+#### C1：区块哈希算法不兼容（最普遍）
 
-2. **影响面枚举（分两个 Rollup 框架，用小标题区分）**  
+约 300 字。
 
-   *OP Stack 受影响点*（需列出具体代码位置，说明"哪里校验、校验什么、失败后什么后果"）：
-   - `op-service/sources/types.go`：获取区块后本地重算哈希与 RPC 返回值对比，失败返回 error，导致 op-node 无法处理该区块
-   - `op-service/sources/receipts.go`：验证收据根，失败导致 L2 区块派生中断
-   - `op-node/rollup/derive/attributes.go`、`check_l1.go`、`l1_traversal.go`、`sequencer.go`：L1 origin 连续性校验（父子区块哈希匹配），失败触发 ResetError，op-node 进入重置流程，L2 停止产块
-   - `op-service/txmgr/estimator.go`：`blobFee` 为 nil（Conflux 不支持 EIP-4844）导致 op-batcher panic
+技术本质：Conflux eSpace 的区块头包含 Tree-Graph 共识专有字段（如 `espaceGasLimit`），不在以太坊 EIP-3675 定义的标准结构中。Ethereum 客户端本地重算哈希时只处理标准字段，结果与 Conflux 节点计算的哈希不同。这一差异是结构性的、必然的。
 
-   *CDK 受影响点*：
-   - `sync/evmdownloader.go`：从 L1 拉取事件后，用事件中的 `blockHash` 查询完整区块，校验两者哈希一致性，失败导致 L1 事件同步中断，`cdk-node` 无法获取新的 L1 状态
+影响面（分框架枚举，需列具体代码位置和失败后果）：
 
-3. **次要兼容性问题（一段，简要列出）**  
-   - `eth_getLogs` 不支持 `fromBlock=earliest` 参数
-   - `eth_getTransactionByBlockHashAndIndex` 行为差异
-   - Conflux Gas limit > 1500 万的交易不被打包（EIP-7623 gas 计算与 Conflux 对齐问题）
+*OP Stack*：
+- `op-service/sources/types.go`：获取区块后本地重算哈希，失败使 op-node 无法处理该区块
+- `op-service/sources/receipts.go`：验证收据根，失败导致 L2 区块派生中断
+- `op-node/rollup/derive/attributes.go`（2 处）、`check_l1.go`（2 处）、`l1_traversal.go`（1 处）、`sequencer.go`（1 处）：L1 origin 连续性校验，失败触发 ResetError，L2 停止产块
 
-**衔接语**：问题横跨 RPC 接口和客户端内核两个层次，单一解法无法覆盖全部，由此引出下节的双层适配方案。
+*CDK*：
+- `sync/evmdownloader.go`：事件日志的 `blockHash` 与查询到的区块 `hash` 不一致，L1 事件同步中断
+
+#### C2：EVM 执行层行为差异
+
+约 200 字，说明两个独立的 EVM 行为差异：
+
+*FloorDataGas 计算偏差*：op-batcher 在提交 calldata batch 时，通过 op-geth 的 `FloorDataGas` 逻辑估算 gas 上限。Conflux 对 calldata 字节的 gas 计价与 EIP-7623 标准存在偏差（eSpace 的 align-evm 问题），导致估算值系统性低于链上实际消耗，batch 交易因 gas 不足被拒绝。
+
+*checkMinGas 汇编不兼容*：`OptimismPortal2` 合约的 `checkMinGas` 函数使用内联汇编计算 calldata gas 消耗，用于确保提现调用时目标合约的 gas 充足。该汇编依赖以太坊的特定 gas 规则，在 Conflux EVM 中行为不同，导致提现交易的 gas 估算结果始终低于实际需求，`finalizeWithdrawalTransaction` 调用失败。
+
+#### C3：L1 区块生产速率差异
+
+约 200 字。
+
+问题根源：OP Stack 的 `L1Traversal` 组件每次 L2 出块只将 L1 origin 递增 1，隐含假设是 L1 与 L2 产块频率大致匹配。Conflux eSpace 产块速率高于此假设时，L2 引用的 L1 origin 与真实 L1 头部差距随时间线性扩大。当差距超过 `maxSequencerDrift`（Fjord 分叉后固定为 1800 秒，不可配置），sequencer 拒绝产块，所有 L2 交易（含 L1→L2 deposit）全部阻塞。
+
+说明这是 OP Stack 专有问题：CDK 的 sequencer 机制不依赖相同的 L1 origin 追踪逻辑，不受此影响。
+
+#### C4：交易类型限制（EIP-4844 缺失）
+
+约 100 字。
+
+OP Stack 默认以 EIP-4844 blob 交易向 L1 提交 batch。Conflux eSpace 未实现 EIP-4844，`eth_feeHistory` 响应中无 `blobFee` 字段，op-batcher 在尝试构造 blob 交易时因 nil pointer 崩溃。此问题独立于区块哈希问题，即使 C1 全部解决，op-batcher 仍无法正常运行。
+
+#### C5：CDK 架构外部依赖缺失
+
+约 150 字。
+
+CDK 的 `cdk-node` 在默认配置下依赖 Agglayer 聚合服务：aggregator 将 ZK 证明提交给 Agglayer 而非直接发到 L1，由 Agglayer 将多链证明聚合为悲观证明（Pessimistic Proof）后统一结算。Conflux eSpace 环境未部署 Agglayer，导致证明永远无法最终提交，`Last Verified Batch Number` 停止更新，L2 状态无法最终确认。这是 CDK 独有的架构依赖问题，与上述四类 EVM/网络层面的差异性质不同。
+
+**衔接语**：五类问题影响层次不同，解决路径也不同——C1 需要 RPC 与内核的双层配合，C2 需要代码与合约层修改，C3 需要配置与算法共同解决，C4 是配置选项切换，C5 是架构依赖的绕过。下节统一梳理各类问题的方案选择。
 
 ---
 
-### 4.2.2 两层适配总体方案设计
+### 4.2.2 总体适配方案设计
 
-**本节目标**：在展示具体实现之前，让读者理解为什么需要两层，以及每层负责什么、不负责什么。
+**本节目标**：在进入各个具体实现之前，建立五类问题与对应方案的完整映射关系，让读者理解整体适配架构，同时对最复杂的 C1 问题深入论证双层方案的必要性。
 
-**核心论点**：代理层与内核适配层各自解决对方无法解决的子问题，两者缺一不可。
+**核心论点**：五类问题的解法相互独立，各自针对不同层次；其中 C1（区块哈希）的解法最为复杂，需要代理层与内核层协同工作，其设计理由需要单独论证。
 
 **需要写出来的内容**：
 
-1. **设计空间展示（表格或对比段落）**  
-   列出三种备选方案，逐一分析其覆盖范围和局限：
+1. **问题-方案总览（表格，约 150 字）**
+
+   | 问题类别 | 根因层次 | 适配方案 | 实施位置 |
+   |---------|---------|---------|---------|
+   | C1 区块哈希不兼容 | RPC 返回值 + 客户端内核校验 | jsonrpc-proxy 修正哈希（代理层）+ 校验点降级（内核层） | jsonrpc-proxy、op-node、cdk-node |
+   | C2 EVM 执行差异 | op-geth gas 估算 + 合约汇编 | FloorDataGas 翻倍（op-geth fork）+ 删除 checkMinGas（合约 fork） | op-geth、OptimismPortal2 合约 |
+   | C3 产块速率差异 | op-node L1 遍历算法 | 出块时间配置 1s + op-node 追赶机制 | 配置文件、op-node |
+   | C4 交易类型限制 | op-batcher 默认配置 | 强制 calldata 模式 + blobFee nil 防护 | op-batcher 启动参数、estimator.go |
+   | C5 架构依赖缺失 | cdk-node 证明提交路径 | Agglayer 关闭 + SettlementBackend 改为 l1 | kurtosis-cdk 配置、cdk-node 配置 |
+
+2. **C1 双层方案必要性论证（核心论证，约 400 字）**
+
+   三种备选方案对比：
 
    | 方案 | 思路 | 覆盖范围 | 不能覆盖的场景 |
-   |------|------|----------|--------------|
-   | 修改 Conflux 节点 | 让节点直接返回 Ethereum 兼容哈希 | 全部 | 需改主链，不可行 |
-   | 纯 RPC 代理层 | 拦截 RPC 响应并修正哈希 | RPC 返回值中的哈希 | 客户端内部用缓存数据做的跨区块哈希对比（不经过新的 RPC 调用） |
-   | 纯内核修改 | 在各客户端中跳过所有哈希校验 | 全部 | 完全放弃 L1 完整性验证，安全风险过高 |
-   | **代理层 + 选择性内核适配（本方案）** | 代理修正 RPC 返回值；内核只对无法被代理覆盖的校验点做最小化降级 | 全部 | — |
+   |------|------|---------|--------------|
+   | 修改 Conflux 节点 | 让节点直接返回 Ethereum 标准哈希 | 全部 | 需改主链，对测试网/主网不可行 |
+   | 纯 RPC 代理层 | 拦截 RPC 响应修正 `hash` 字段 | RPC 新拉取数据时的哈希 | 客户端内部对历史缓存数据做的跨区块哈希比对（不经过新的 RPC 调用） |
+   | 纯内核修改 | 各客户端中跳过全部哈希校验 | 全部 | 完全放弃 L1 完整性验证，安全代价过高 |
+   | **代理层 + 选择性内核降级（本方案）** | 代理修正 RPC 返回值；内核对无法被代理覆盖的校验点做最小化降级 | 全部 | — |
 
-2. **选择理由（一段）**  
-   代理层能覆盖"从 RPC 新拉取数据时的哈希"，但 op-node 推导管线存在对历史缓存数据的再次哈希比对（例如检查 L1 origin 的父子关系时，使用的是内存中已有的 L1 区块引用，而非重新发起 RPC），这些路径无法被代理拦截。因此代理层是必要但不充分的；对这些特定检查点，采用"保留逻辑，降级错误级别（从触发系统重置降为记录告警）"的策略，以最小改动保留部分容错能力，同时不因误报导致系统频繁重置。
+   选择理由：op-node 推导管线中有 6 处哈希校验使用内存里已有的 L1 区块引用（非新 RPC 调用），代理层无法拦截；对这 6 处采用"降级为告警"而非"彻底删除"，保留了部分容错逻辑，最小化安全代价。
 
-3. **架构示意（配图或文字描述）**  
+3. **总体架构示意（配图，约 100 字说明）**
+
    ```
-   OP Stack / CDK 客户端
-        │  RPC 请求（eth_getBlockByHash 等）
-        ▼
-   jsonrpc-proxy（代理层）
-     · 修正区块哈希
-     · 参数转换（hash→number）
-     · SQLite 缓存
-     · batch RPC 支持
-        │  已修正的响应
-        ▼
-   Conflux eSpace（L1）
-
-   内核适配层（各 Rollup 客户端内部）：
-     · 哈希校验点降级（OP Stack 6 处）
-     · evmdownloader hash 覆盖（CDK 1 处）
+   ┌─────────────────────────────────────┐
+   │  OP Stack 客户端 / CDK 客户端        │
+   │  内核适配层：                        │
+   │  · C1 校验点降级（op-node 6处/cdk 1处）│
+   │  · C2 FloorDataGas 翻倍 (op-geth)  │
+   │  · C3 L1 origin 追赶 (op-node)     │
+   │  · C4 calldata 强制 + blobFee 防护  │
+   │  · C5 SettlementBackend=l1 (cdk)   │
+   └──────────────┬──────────────────────┘
+                  │ RPC 请求
+                  ▼
+   ┌─────────────────────────────────────┐
+   │  jsonrpc-proxy（代理层，解决 C1 RPC侧）│
+   │  · 区块哈希修正（RLP 重算）          │
+   │  · hash→number 参数转换             │
+   │  · SQLite 持久化缓存                │
+   │  · batch RPC 支持                  │
+   └──────────────┬──────────────────────┘
+                  │
+                  ▼
+        Conflux eSpace（L1）
    ```
 
 ---
 
 ### 4.2.3 RPC 代理层：jsonrpc-proxy 设计与实现
 
-**本节目标**：深入论述代理层的核心技术机制，包括为什么单纯"替换哈希字段"还不够、以及从正确性到生产可用所经历的工程迭代。
+**本节目标**：深入论述代理层的四个核心机制，以及从正确性原型到生产可用组件的工程迭代过程。
 
-**核心论点**：代理层的核心是用 Ethereum 标准算法为 Conflux 区块重新计算哈希，并以此为锚点解决一系列衍生的查询兼容性问题；性能问题驱动了从内存计算到 SQLite 持久化的架构升级。
+**核心论点**：代理层以区块哈希修正为核心，围绕哈希的"存储（SQLite）、修正（RLP 重算）、查询（双向映射）、透传（batch 支持）"四个问题形成完整解法。
 
 **需要写出来的内容**：
 
-1. **区块哈希修正机制（一段，约 250 字）**  
-   - 触发条件：代理拦截所有返回区块数据的 RPC 方法（`eth_getBlockByHash`、`eth_getBlockByNumber` 等）
-   - 重算过程：从 Conflux 响应中提取标准 Ethereum 区块头字段（`parentHash`、`sha3Uncles`、`miner`、`stateRoot`、`transactionsRoot`、`receiptsRoot`、`logsBloom`、`difficulty`、`number`、`gasLimit`、`gasUsed`、`timestamp`、`extraData`、`mixHash`、`nonce`），按 Ethereum 标准做 RLP 编码，取 Keccak-256，用结果替换响应中的 `hash` 字段
-   - 关键约束：只替换 `hash` 字段，其他字段（包括 Conflux 专有字段）保持原始值，保证业务语义不变
-   - 双向查询支持：`eth_getBlockByHash` 同时维护 cfx hash → eth hash 映射，使 op-challenger 传入 cfx hash 时也能定位到正确区块
+1. **区块哈希修正机制（约 250 字）**
 
-2. **RPC 参数兼容性转换（一段）**  
-   部分 Conflux RPC 方法不支持以区块哈希为参数（如 `eth_getBalance`、`eth_getCode`、`eth_getBlockReceipts`），代理在转发前将请求中的 block hash 参数替换为对应的 block number。这要求代理维护 eth hash → block number 的查询索引，由 SQLite 提供。
-   
-   说明两类处理的分工：哈希修正解决"返回值里的 hash 字段不对"，参数转换解决"Conflux 不认识 hash 类型参数"，两类问题互相独立。
+   触发条件：代理拦截所有返回区块数据的 RPC 方法（`eth_getBlockByHash`、`eth_getBlockByNumber` 等）。
 
-3. **SQLite 持久化缓存（一段，论述性能演进）**  
-   初始实现为内存映射（每次重启清空），在 L2 出块时间缩短为 1 秒后，代理收到请求的频率大幅提升，内存缓存命中率低，每次需要实时重算 + 查询 Conflux 节点，导致 RPC 响应延迟超过 L2 出块间隔，L2 出块开始积压。
-   
-   迁移到 SQLite 后，已计算的 hash 映射落盘持久化，重启后无需重建，单次查询延迟从毫秒级降至微秒级，解除了出块延迟的瓶颈。这一改进使 jsonrpc-proxy 从功能正确的"原型工具"升级为能承载持续生产流量的可用组件。
+   重算过程：从 Conflux 响应中提取 15 个标准 Ethereum 区块头字段（`parentHash`、`sha3Uncles`、`miner`、`stateRoot`、`transactionsRoot`、`receiptsRoot`、`logsBloom`、`difficulty`、`number`、`gasLimit`、`gasUsed`、`timestamp`、`extraData`、`mixHash`、`nonce`），按以太坊标准做 RLP 编码，取 Keccak-256，用结果替换响应中的 `hash` 字段。
 
-4. **batch RPC 支持（一段）**  
-   op-challenger 以 JSON-RPC batch 格式发送请求（单次 HTTP 请求包含多个 JSON-RPC 方法调用）。初始代理只处理单条请求，op-challenger 的调用均以错误响应结束，导致争议游戏无法正常解析和提交。适配后代理支持对 batch 请求中每条子请求独立处理，结果汇聚后统一返回。
+   关键约束：只替换 `hash` 字段，Conflux 专有字段（如 `espaceGasLimit`）保持原始值，业务语义不变。
+
+   双向查询支持：同时维护 cfx hash → eth hash 的反向映射。op-challenger 在创建 DisputeGame 时会将当时的 L1 block hash（cfx 原生哈希）写入合约，resolve 阶段再以该 cfx hash 发起 `eth_getBlockByHash` 查询，因此代理必须同时支持以 cfx hash 和 eth hash 定位同一区块。
+
+2. **RPC 参数兼容性转换（约 150 字）**
+
+   部分 Conflux RPC 方法不支持以区块哈希作为参数（如 `eth_getBalance`、`eth_getCode`、`eth_getBlockReceipts`），代理在转发前将请求中的 block hash 参数替换为对应的 block number，查询索引由 SQLite 提供。
+
+   两类处理分工：哈希修正解决"返回值的 hash 字段错误"，参数转换解决"Conflux 不接受 hash 类型参数"。两个问题独立，但共享同一套 SQLite 索引。
+
+3. **SQLite 持久化缓存（约 200 字，论述性能演进）**
+
+   初始实现使用内存映射。将 L2 出块时间压缩为 1 秒后（为解决 C3 问题），代理收到请求频率大幅提升，每次无缓存命中都需要重算哈希并查询 Conflux 节点，RPC 响应延迟超过 L2 出块间隔，L2 出块出现积压——proxybecame the bottleneck。
+
+   迁移到 SQLite 后，已计算的 hash 映射落盘持久化，重启后无需重建，高频重复查询直接命中索引，出块延迟恢复正常。此次迁移是 jsonrpc-proxy 从"可用"升级为"可生产"的关键工程节点，说明了 C1 和 C3 两类问题的解法在运行时存在依赖关系。
+
+4. **batch RPC 支持（约 100 字）**
+
+   op-challenger 以 JSON-RPC batch 格式发送请求（单次 HTTP 请求含多条 JSON-RPC 调用）。代理初始只处理单请求，导致 op-challenger 的所有调用失败，争议游戏无法解析和提交。适配后对 batch 中每条子请求独立处理，结果汇聚后统一返回。
 
 ---
 
 ### 4.2.4 OP Stack 接入适配
 
-**本节目标**：系统论述 OP Stack 各组件中所有针对 Conflux eSpace 的内核级改动，覆盖从能运行到稳定运行的完整路径。
+**本节目标**：按问题类别论述 OP Stack 各组件的内核级改动，每类改动直接对应 4.2.1 中的问题编号。
 
-**核心论点**：OP Stack 的适配工作分为四个层次，按顺序解决"能启动→能同步→能提现→能长期运行"四个问题，每个层次都有对应的技术难点和设计决策。
+**核心论点**：OP Stack 涉及 C1–C4 四类问题的适配，其中 C2（EVM 差异）对应的两处改动（FloorDataGas、checkMinGas）各自修改于不同层次（执行引擎与合约），共同保障了 batch 提交和跨链提现两条核心路径的正确性。
 
-**A. L1 数据接入适配**
+**A. 区块哈希校验降级（对应 C1 内核侧）**
 
-*op-batcher 强制 calldata 模式（约 150 字）*  
-OP Stack 默认以 EIP-4844 blob 交易向 L1 提交 batch 数据，Conflux eSpace 不支持该交易类型（`blobFee` 字段在 `eth_feeHistory` 响应中缺失，导致 op-batcher 在估算 gas 时访问 nil 指针崩溃）。方案一是填充默认值（`blobFee = 1`）避免崩溃但仍以 blob 方式发送，方案二是在启动参数中设置 `--data-availability-type=calldata` 强制切换为 calldata 模式。
-选择方案二，原因：calldata 是 Conflux 已支持的标准交易字段，不依赖 blob gas market 的存在；方案一无法真正发出有效 blob 交易，只是延后暴露错误。代价是 calldata 模式每条批次的 L1 gas 消耗高于 blob，但在当前演示和测试规模下可接受。
+约 250 字。
 
-*L1 origin 追赶机制（约 300 字）*  
-这是影响 L2 基本可用性最关键的一个问题，值得深入论述。
-
-问题根源：op-node 的 `L1Traversal` 组件每次出块只将 L1 origin 递增 1，设计假设是 L1 和 L2 出块频率大致相当。Conflux eSpace 产块速率与 OP Stack 默认配置不对齐时，L2 的 L1 origin 会滞后于真实 L1 头部，差距随时间线性增大。当差距超过 `maxSequencerDrift`（1800 秒的固定常量，Fjord 分叉后不可配置），sequencer 拒绝出块，所有 L2 交易（包括 L1→L2 跨链交易）全部阻塞。
-
-解决策略包含两部分：
-1. **配置层**：将 L1 和 L2 出块时间均设为 1 秒，缩小产块频率差距（`seconds_per_slot: 1`）
-2. **代码层**：在 op-node 中增加 L1 origin 追赶逻辑（commit `b3965f416`）：当检测到 L2 的 L1 origin 落后 L1 实际区块超过 30 秒时，允许一次性跨越多个 L1 区块更新 origin，而不是严格按 +1 递增。
-
-说明代价：追赶机制加快了 L1 origin 的更新速度，但跨越多个 L1 区块时，中间区块内的 L1→L2 deposit 事件是否被完整处理需要明确说明——若当前实现在追赶时仍逐块扫描 deposit，则不遗漏；若跳过了中间区块的扫描，则存在 deposit 丢失风险。写作时应核查 commit `b3965f416` 的具体实现，据实描述。
-
-**B. 区块哈希校验降级**
-
-（约 250 字，沿用 4.2.2 中的论证，此处聚焦实现细节）
-
-代理层修正了 RPC 返回值中的哈希，但 op-node 内部有 6 处哈希一致性校验使用的是内存中的历史缓存数据，不经过新的 RPC 调用：
+代理层修正了 RPC 返回值中的哈希，但 op-node 内部 6 处哈希校验使用内存中的历史缓存数据，不经过新的 RPC 调用，无法被代理覆盖：
 
 - `attributes.go`（2 处）：构造 L2 区块属性时检查 L1 origin 父子关系
 - `check_l1.go`（2 处）：验证 L1 canonical 链的连续性
 - `l1_traversal.go`（1 处）：推进 L1 遍历时检测 reorg
 - `sequencer.go`（1 处）：sequencer 启动新区块前校验 L1 origin 一致性
 
-所有 6 处的适配策略统一：将 `return ResetError(...)` 或 `d.emitter.Emit(rollup.ResetEvent{...})` 改为 `log.Warn(...)`，不触发系统级重置。
+适配策略：将 `return ResetError(...)` 或 `d.emitter.Emit(rollup.ResetEvent{...})` 统一改为 `log.Warn(...)`，不触发系统级重置。
 
-设计权衡：这削弱了对 L1 reorg 的即时检测能力。在 Ethereum 主网上，这些检查保护系统免于在 L1 发生浅层 reorg 时产生基于错误 L1 历史的 L2 区块；在 Conflux eSpace 上，由于哈希不兼容，这些检查会产生大量误报，而 Conflux 自身的 Tree-Graph 共识也提供了比 Ethereum 更强的 reorg 抵抗性，降级处理的安全代价在当前场景下是可接受的。
+设计权衡：削弱了对 L1 reorg 的即时检测能力，但在 Conflux eSpace 上这些检查原本就会因哈希不兼容而大量误报，而 Conflux Tree-Graph 共识本身提供了比 PoW 链更强的 reorg 抵抗性，降级处理的安全代价在当前场景下是可接受的。
 
-**C. 提现路径适配**
+**B. L1 数据接入适配（对应 C3 + C4）**
 
-*checkMinGas 合约修改（约 200 字）*  
-L2→L1 提现的最后一步 `finalizeWithdrawalTransaction` 在调用时 gas 估算始终低于实际消耗，交易因 out-of-gas 失败。根因定位到 `OptimismPortal2` 合约中的 `checkMinGas` 函数，该函数使用内联汇编检查 calldata 的 gas 消耗，其行为依赖特定的 EVM gas 计算规则，而 Conflux EVM 在这一规则上与标准 Ethereum 不一致。
+*L1 origin 追赶机制（C3，约 300 字）*
 
-解决方案：fork OP Stack 合约代码（分支 `remove-checkgas-d44bbea24`），在 `OptimismPortal2` 中删除 `checkMinGas` 调用，重新编译并通过脚本（`op-work/republish-contracts.sh`）打包上传，在 kurtosis 部署时指向该定制版合约。
+问题已在 4.2.1 C3 定义。这里论述解决方案。
 
-说明这一修改的影响范围：`checkMinGas` 的作用是防止提现时目标合约因 gas 不足执行失败（这不等于提现失败，只是不执行目标调用），去掉后这一检查不再进行，调用方需自行保证 gas 充足。对于当前演示环境，这是可接受的。
+解决策略包含两个相互配合的部分：
+1. **配置层**：将 L1 和 L2 出块时间均设为 1 秒（`seconds_per_slot: 1`），缩小产块频率差距，减少 origin 滞后的增长速率
+2. **代码层**：在 op-node 中增加 L1 origin 追赶逻辑（commit `b3965f416`）：当检测到 L2 的 L1 origin 落后 L1 实际区块超过 30 秒时，允许一次性跨越多个 L1 区块更新 origin，而不是严格按 +1 递增
 
-*提现等待时间缩短（约 150 字）*  
-OP Stack 默认的 dispute game 生命周期为 7 天（`faultGameMaxClockDuration`），提现还需额外等待 `proofMaturityDelaySeconds`（3.5 天），总等待超过 10 天。演示环境需要在分钟级内完成跨链流程。
+两部分缺一不可：仅调配置，高频率下 origin 滞后仍会因任何短暂延迟而累积；仅加追赶代码，若 L1 始终比 L2 快很多则追赶无法收敛。
 
-修改通过部署时的 `globalDeployOverrides` 配置实现，将以下参数压缩至秒级：`faultGameMaxClockDuration`、`faultGameClockExtension`、`preimageOracleChallengePeriod`、`proofMaturityDelaySeconds`、`faultGameWithdrawalDelay`。
+设计代价：追赶机制在跨越多个 L1 区块时，中间区块内的 L1→L2 deposit 事件是否被完整处理需要明确说明（写作时核查 commit `b3965f416` 具体实现，据实描述）。
 
-需要说明参数之间的约束关系：合约构造时检查 `maxClockExtension ≤ maxClockDuration`，而 `maxClockExtension = max(clockExtension×2, clockExtension+challengePeriod)`，因此三个参数必须同时满足该不等式，任意一个设置不当都会导致合约部署失败。
+*calldata 强制模式（C4，约 150 字）*
+
+问题已在 4.2.1 C4 定义。这里论述方案选择。
+
+方案一：填充 `blobFee = 1` 避免崩溃，但 op-batcher 仍尝试发送 blob 交易，因 Conflux 不支持而失败。
+
+方案二：启动参数 `--data-availability-type=calldata`，强制切换到 calldata 模式，不依赖 blob gas market。
+
+选择方案二。代价是 calldata 模式每条批次的 L1 gas 消耗高于 blob，但在当前测试规模下可接受；更根本的原因是方案一只是延后了错误，不能真正解决问题。
+
+**C. EVM 执行层适配（对应 C2）**
+
+*FloorDataGas 翻倍（约 100 字）*
+
+问题已在 4.2.1 C2 定义（FloorDataGas 计算偏差）。在 op-geth fork 中将 `FloorDataGas` 计算结果乘以 2 作为安全余量，使估算值系统性高于实际消耗，避免 batch 交易因 gas 不足被拒。
+
+注：Conflux 在 2025-05-21 修复了 align-evm 问题，该修改可在升级后撤销；在此之前属于必要的临时适配。
+
+*checkMinGas 合约修改（约 200 字）*
+
+问题已在 4.2.1 C2 定义（checkMinGas 汇编不兼容）。解决方案为 fork OP Stack 合约代码（分支 `remove-checkgas-d44bbea24`），在 `OptimismPortal2` 中删除 `checkMinGas` 调用，重新编译后通过脚本（`op-work/republish-contracts.sh`）打包上传，kurtosis 部署时指向该定制合约版本。
+
+说明影响范围：`checkMinGas` 原本防止提现目标调用因 gas 不足静默失败（注意：这不等于提现失败，提现本身仍会成功，只是目标调用不执行）。去掉后调用方需自行保证 gas 充足。当前演示环境可接受此代价。
+
+*提现等待时间配置（约 150 字）*
+
+OP Stack 默认提现等待超过 10 天（dispute game 7 天 + proofMaturity 3.5 天），演示环境无法接受。通过部署时的 `globalDeployOverrides` 将相关参数压缩至秒级：`faultGameMaxClockDuration`、`faultGameClockExtension`、`preimageOracleChallengePeriod`、`proofMaturityDelaySeconds`、`faultGameWithdrawalDelay`。
+
+约束关系需说明：合约构造时强制检查 `max(clockExtension×2, clockExtension+challengePeriod) ≤ maxClockDuration`，三个参数必须同时满足该不等式，否则部署失败。这不是简单的"改小就行"，参数之间存在硬性约束。
 
 **D. 运行稳定性修复**
 
-*op-geth FloorDataGas 适配（约 100 字）*  
-op-batcher 以 calldata 模式提交 batch 时，通过 op-geth 的 `FloorDataGas` 逻辑估算 calldata gas。Conflux eSpace 对 calldata 字节的 gas 计算与 EIP-7623 标准存在偏差，导致估算值低于链上实际消耗，交易提交失败。解决方案：在 op-geth fork 中将 `FloorDataGas` 计算结果乘以 2 作为安全余量。注：Conflux 在 2025-05-21 后已修复 align-evm 问题，该修改可在升级后撤销，不影响正确性。
+*blobFee 空值防护（约 80 字）*
 
-*blobFee 空值防护（约 80 字）*  
-即使切换为 calldata 模式，op-batcher 内部仍有 metrics 路径会访问 `blobFee` 字段用于指标记录。Conflux `eth_feeHistory` 不返回 `blobFee`，该字段为 nil，导致 `RecordBlobBaseFee` 中的浮点数转换访问空指针崩溃。在 `op-service/txmgr/estimator.go` 中增加 nil 检查，`blobFee` 为 nil 时赋值为 1，防止 panic 同时不影响交易逻辑。
+即使已切换 calldata 模式，op-batcher 的 metrics 路径仍访问 `blobFee` 字段（`RecordBlobBaseFee`），Conflux `eth_feeHistory` 不返回此字段，导致 nil pointer 崩溃。在 `op-service/txmgr/estimator.go` 增加 nil 检查，`blobFee` 为 nil 时赋值 1，仅防止 panic，不影响交易路径。
 
-*op-proposer GameAlreadyExists 修复（约 150 字）*  
-系统运行约 2 天后，op-proposer 开始陷入永久失败循环，日志显示 `GameAlreadyExists`。根本原因：op-proposer 每隔固定间隔提交新的 DisputeGame；当提案时间超过 PollInterval 后，op-proposer 中的"查询最新游戏"逻辑不再返回已超时游戏的信息，导致上层误判为"尚无游戏"，重复创建同一输出根的游戏，合约因已存在而 revert。
+*op-proposer GameAlreadyExists 死循环（约 150 字）*
 
-修复（commit `39e0f007`）：在查询最新 DisputeGame 时，正确处理超出截止时间的游戏状态，返回其完整信息，避免误判为"无游戏"。
+系统运行约 2 天后 op-proposer 陷入永久失败循环，日志显示 `GameAlreadyExists`。根本原因：超过 PollInterval 后，"查询最新游戏"逻辑不再返回已超时游戏的信息，上层误判为"无游戏"，重复创建同一输出根的游戏，合约因已存在而 revert，循环往复。
+
+修复（commit `39e0f007`）：正确处理超出截止时间的游戏状态查询，返回完整信息，避免误判。
 
 ---
 
 ### 4.2.5 CDK zkEVM 接入适配
 
-**本节目标**：论述 CDK 框架的适配工作，重点说明与 OP Stack 相比适配点更集中、但根因相同、且 CDK 的 ZK 证明架构带来了 OP Stack 没有的特定问题（如 Agglayer 依赖、ethtx-manager 行为）。
+**本节目标**：论述 CDK 框架针对 C1 和 C5 两类问题的适配，以及 ZK 证明提交架构特有的稳定性问题。
 
-**核心论点**：CDK 的适配工作集中在三类问题——架构依赖调整、区块哈希同步一致性、以及 ZK 证明提交的稳定性——每类都有对应的最小化修改方案。
+**核心论点**：CDK 的适配点比 OP Stack 少但更集中，C1 的哈希问题只影响一处（evmdownloader），C5 的架构依赖问题决定了证明提交路径的选择，两者叠加后的 ZK 证明提交稳定性由 ethtx-manager 的替换来保障。
 
-**A. 架构配置适配**
+**A. 架构依赖适配（对应 C5）**
 
-*Agglayer 模块关闭与 SettlementBackend 切换（约 200 字）*  
-CDK 默认将 ZK 证明通过 Agglayer 聚合服务提交 L1，`cdk-node` 的 aggregator 组件在提交证明时向 Agglayer 服务而非 L1 合约发送事务。Conflux eSpace 环境中未部署 Agglayer，若不修改则 `Last Verified Batch Number` 永远不更新，L2 状态无法最终确认。
+*Agglayer 关闭与 SettlementBackend 切换（约 200 字）*
 
-适配包含两步：
-1. 在 kurtosis-cdk 配置中关闭 Agglayer 部署（`deploy_agglayer: false`）
-2. 修改 cdk-node 的 `SettlementBackend` 配置由 `agglayer` 改为 `l1`，使 aggregator 直接向 L1 合约（`PolygonRollupManager`）提交证明
+问题已在 4.2.1 C5 定义。适配两步：
+1. kurtosis-cdk 关闭 Agglayer 部署（`deploy_agglayer: false`）
+2. cdk-node 的 `SettlementBackend` 由 `agglayer` 改为 `l1`，aggregator 直接向 `PolygonRollupManager` 合约提交证明
 
-说明这一修改的技术含义：`l1` 模式下，每条 L2 证明独立提交 L1，无跨链聚合；`agglayer` 模式下，多链证明可以被聚合成悲观证明（Pessimistic Proof）统一结算。当前接入方案放弃了聚合能力，换取了对外部 Agglayer 服务的零依赖。
+技术含义：`l1` 模式下每条 L2 证明独立提交，放弃了多链证明聚合为悲观证明（Pessimistic Proof）的能力，换取对外部 Agglayer 服务的零依赖。当 Conflux 主网部署 Agglayer 后，可通过切回 `agglayer` 模式恢复聚合能力。
 
-**B. 区块哈希同步适配**
+**B. 区块哈希同步适配（对应 C1 内核侧）**
 
-*evmdownloader hash 覆盖（约 200 字）*  
-`cdk-node` 的 `sync/evmdownloader.go` 在拉取 L1 事件日志后，会以事件中的 `blockHash` 为参数查询完整区块，然后校验查询结果的 `hash` 字段与 `blockHash` 参数是否一致。由于代理层将区块的 `hash` 字段修正为 eth 标准哈希，而事件日志中记录的 `blockHash` 是 Conflux 节点原始写入的 cfx 哈希，两者不同，校验失败导致同步中断。
+*evmdownloader hash 覆盖（约 200 字）*
 
-适配策略：在校验前用事件的 `blockHash` 直接覆盖区块数据中的 `Hash` 字段（`b.Hash = l.BlockHash`），以事件侧为准，统一两者来源，绕过不一致性。
+`cdk-node` 的 `sync/evmdownloader.go` 在拉取 L1 事件日志后，以事件中的 `blockHash` 查询完整区块，然后校验查询结果的 `hash` 字段是否与 `blockHash` 参数一致。
 
-与 OP Stack 适配策略的对比：OP Stack 是"保留校验逻辑，降级错误级别"，CDK 是"统一数据来源，消除不一致"，后者更简洁，适用于 CDK 哈希问题来源单一（仅 evmdownloader）的场景。
+代理层将区块的 `hash` 字段修正为 eth 标准哈希，但事件日志中记录的 `blockHash` 是 Conflux 节点原始写入的 cfx 哈希（事件在 Conflux 区块中产生，其 blockHash 字段由 Conflux 节点填写，不经过代理修正），两者不匹配，校验失败，同步中断。
+
+适配策略：在校验前用事件的 `blockHash` 直接覆盖区块数据中的 `Hash` 字段（`b.Hash = l.BlockHash`），统一两者来源。
+
+与 OP Stack 策略对比：OP Stack 是"保留校验逻辑，降级错误"，CDK 是"统一数据来源，消除不一致"。CDK 此处的哈希问题来源单一（仅 evmdownloader 一处），采用覆盖策略更简洁直接。
 
 **C. 运行稳定性修复**
 
-*zkevm-ethtx-manager 死循环修复（约 200 字）*  
-`cdk-node` 的 aggregator 在向 L1 提交 ZK 证明时，通过 `zkevm-ethtx-manager` 管理交易生命周期。当 L1 上的证明交易因合约状态问题 revert 时（例如 gas 估算误差、合约临时不可用），原版 `zkevm-ethtx-manager` 进入无限重试循环，aggregator 永久阻塞，整个证明提交流程卡死，`Last Verified Batch Number` 停止更新。在测试中观察到一次 revert 可导致系统在数小时内不可恢复，必须手动重启。
+*zkevm-ethtx-manager 死循环修复（约 200 字）*
 
-解决方案：将 `go.mod` 中的依赖替换为 fork 版本（`pana/zkevm-ethtx-manager`），该 fork 对 revert 结果有明确的失败终止逻辑，失败后上报错误并退出重试，由上层决策是否重新提交。
+`cdk-node` aggregator 通过 `zkevm-ethtx-manager` 管理 L1 上的证明提交交易。当 L1 交易因合约状态问题 revert 时（如 gas 误差、合约临时不可用），原版库进入无限重试循环，aggregator 永久阻塞，`Last Verified Batch Number` 停止更新。测试中观察到一次 revert 可导致系统数小时不可恢复，需手动重启。
 
-技术实现：通过 `go.mod` 的 `replace` 指令替换依赖，上层代码无改动，仅替换依赖包版本。
+解决方案：通过 `go.mod` 的 `replace` 指令将依赖替换为 fork 版本（`pana/zkevm-ethtx-manager`）。该 fork 对 revert 结果有明确的失败终止逻辑，失败后上报错误并退出重试，由上层决定是否重新提交。上层代码无改动。
 
-*合约部署脚本 exit code 适配（约 100 字）*  
-kurtosis-cdk 在 Starlark 脚本中通过 `plan.exec` 调用 shell 脚本部署 L1 合约，原始调用方式无法正确捕获 shell exit code，脚本失败时 kurtosis 不中止部署流程，导致在错误状态下继续启动后续服务，问题延迟暴露且难以诊断。
+说明这里存在的根本矛盾：ethtx-manager 的无限重试本是为了处理网络抖动等临时错误，但当错误是合约 revert（永久性失败）时，重试没有意义且会阻塞整条流水线。fork 的本质是区分了"临时错误应重试"和"确定失败应终止"两类场景。
 
-适配：改为通过 `bash -c '脚本内容; exit $?'` 包装执行，确保 shell 脚本的 exit code 被 `plan.exec` 正确接收。
+*合约部署脚本 exit code 适配（约 100 字）*
+
+kurtosis-cdk 的 Starlark 脚本通过 `plan.exec` 调用 shell 脚本部署 L1 合约，原始方式无法正确捕获 shell exit code，脚本失败时 kurtosis 不中止流程，在错误状态下继续启动后续服务，问题延迟暴露。改为通过 `bash -c` 包装执行，确保 exit code 正确传播。
 
 ---
 
@@ -279,45 +350,48 @@ kurtosis-cdk 在 Starlark 脚本中通过 `plan.exec` 调用 shell 脚本部署 
 
 | 节 | 子节 | 建议字数 | 权重说明 |
 |----|------|---------|---------|
-| 4.2.1 | — | 800–1000 字 | 奠定全文论证基础 |
-| 4.2.2 | — | 800–1000 字，含表格+架构图 | 核心设计判断力所在 |
-| 4.2.3 | 哈希修正+参数转换+SQLite+batch | 800–1000 字 | 公共基础设施，原创贡献高 |
-| 4.2.4 | A: calldata+追赶机制 | 500–700 字 | L1 origin 追赶是重点 |
-|        | B: 校验降级 | 400–500 字 | 有 4.2.2 铺垫，不重复论证 |
-|        | C: 提现适配 | 400–500 字 | checkMinGas 是原创贡献 |
-|        | D: FloorDataGas+blobFee+GameAlreadyExists | 400 字 | 简洁描述即可 |
-| 4.2.5 | A: Agglayer+SettlementBackend | 400 字 | |
-|        | B: evmdownloader | 300 字 | |
-|        | C: ethtx-manager+脚本 | 300 字 | ethtx-manager 是重点 |
-| **全节合计** | | **约 5800–6800 字** | |
+| 4.2.1 | C1–C5 五类问题 | 1000–1200 字 | 奠定全节论证基础，必须全面 |
+| 4.2.2 | 总览表 + C1 双层论证 + 架构图 | 700–900 字 | 核心设计判断力所在 |
+| 4.2.3 | 哈希修正+参数转换+SQLite+batch | 700–900 字 | 公共基础层，原创贡献高 |
+| 4.2.4 | A: C1 校验降级 | 350–400 字 | 有 4.2.2 铺垫，不重复论证 |
+|        | B: C3 追赶+C4 calldata | 500–600 字 | L1 origin 追赶是重点 |
+|        | C: C2 FloorDataGas+checkMinGas+提现时间 | 450–550 字 | checkMinGas 是原创贡献 |
+|        | D: 稳定性修复 | 250–300 字 | 简洁描述即可 |
+| 4.2.5 | A: C5 Agglayer | 300–350 字 | |
+|        | B: C1 evmdownloader | 250–300 字 | |
+|        | C: ethtx-manager+脚本 | 300–350 字 | ethtx-manager 是重点 |
+| **全节合计** | | **约 5800–6900 字** | |
 
 ---
 
 ## 五、需要补充的数据与素材
 
-写作过程中，以下信息需要作者补充，当前 spec 中已留空：
-
 | 类别 | 所需内容 | 用在哪节 |
 |------|---------|---------|
 | 性能数据 | SQLite 缓存前后 RPC 响应延迟对比（如有测量） | 4.2.3 SQLite 部分 |
-| 性能数据 | L1 origin 追赶机制前后 L2 出块延迟或 safe/unsafe 差距数据 | 4.2.4-A |
-| 技术细节 | op-node 追赶逻辑的具体触发条件（>30s 的依据来源） | 4.2.4-A |
-| 技术细节 | checkMinGas 的原始汇编实现及 Conflux EVM 具体不兼容点 | 4.2.4-C |
-| 数据 | 提现等待时间压缩后的实测完整提现流程时长 | 4.2.4-C |
-| 架构图 | 两层适配总体架构图（建议配一张） | 4.2.2 |
+| 性能数据 | L1 origin 追赶机制前后 safe/unsafe 差距数据（如日志截图） | 4.2.4-B |
+| 技术细节 | 追赶机制触发阈值（>30s）的来源依据 | 4.2.4-B |
+| 技术细节 | 追赶时是否逐块扫描 deposit（核查 commit b3965f416） | 4.2.4-B |
+| 技术细节 | checkMinGas 原始汇编代码及 Conflux EVM 具体不兼容点 | 4.2.4-C |
+| 数据 | 提现时间参数压缩后实测完整提现流程耗时 | 4.2.4-C |
+| 架构图 | 4.2.2 中的总体适配架构图（正式绘制，配图说明） | 4.2.2 |
 
 ---
 
 ## 六、写作质量自查清单（写完初稿后对照）
 
-- [ ] 每节开头有一句说明"本节动机来自上节什么结论"的衔接语
-- [ ] 4.2.1 中的影响面枚举包含了具体代码位置和失败后果，不只是列名称
-- [ ] 4.2.2 的方案对比表填写了"不能覆盖的场景"一列，不留空
-- [ ] 4.2.3 的 SQLite 改进节包含了前后对比的描述（不一定要数据，但要说清楚变化）
-- [ ] 4.2.4-A 的 L1 origin 追赶机制说明了追赶的代价（可能遗漏 deposit 事件的边界情况）
-- [ ] 4.2.4-B 对 6 处降级改动有分类论述，不是逐一罗列
-- [ ] 4.2.4-C 的 checkMinGas 部分说明了去掉该检查对用户的影响
-- [ ] 4.2.5-A 明确说明了选择 `l1` 模式相比 `agglayer` 模式放弃了什么能力
+- [ ] 4.2.1 五类问题之间有明确的"为什么相互独立"说明，不是简单罗列
+- [ ] 4.2.1 C1 的影响面枚举包含具体代码位置和失败后果
+- [ ] 4.2.1 C3 说明了 `maxSequencerDrift` 的 1800 秒上限在 Fjord 后不可配置这一关键约束
+- [ ] 4.2.2 的问题-方案总览表填写了"实施位置"列，不留空
+- [ ] 4.2.2 的 C1 双层方案论证填写了"不能覆盖的场景"，不留空
+- [ ] 4.2.4-B 的 L1 origin 追赶说明了两部分（配置+代码）缺一不可的原因
+- [ ] 4.2.4-B 的 L1 origin 追赶说明了追赶时对 deposit 事件处理的实际情况
+- [ ] 4.2.4-C 的 checkMinGas 说明了去掉检查对用户操作的影响
+- [ ] 4.2.4-C 的提现时间参数说明了参数间约束关系
+- [ ] 4.2.5-A 明确说明放弃了聚合能力，以及未来可恢复的条件
+- [ ] 4.2.5-C 的 ethtx-manager 说明了"临时错误/确定失败"的区分是修复的本质
+- [ ] 全节每个解决方案都在 4.2.1 中有对应的问题编号（C1–C5）
 - [ ] 全节无"这种设计不仅……还……"类型的尾巴句
 - [ ] 全节无"综合考虑后选择"类型的空洞论证
-- [ ] 原创工作（各节的具体方案和实现）篇幅占全节 80% 以上
+- [ ] 原创工作篇幅占全节 80% 以上
