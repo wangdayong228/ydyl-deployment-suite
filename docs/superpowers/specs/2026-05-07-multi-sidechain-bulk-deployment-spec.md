@@ -87,7 +87,7 @@
 
 - **C1 异构栈差异**：三类侧链各自有独立流水线（`cdk_pipe.sh` / `op_pipe.sh` / `xjst_pipe.sh`）、独立环境变量契约、独立产物落点。CDK 走 Kurtosis + ZK proof 中继；OP 走 Kurtosis + Merkle proof 中继；XJST 走自有 L1 合约部署 + 链内多节点协同 + 直 bridge。三套形态不可能用单一脚本统一。
 - **C2 多步状态化部署**：每条链 12 步流水线，单条 CDK 含 Kurtosis 启动、L1/L2 合约部署、claim-service 拉起等长尾步骤，半途失败不能从零重启。
-- **C3 拓扑约束**：节点到 L1 RPC 的网络延迟一旦升高，OP/CDK 的 L2 derivation 拉取 L1 数据的速度会持续慢于 L1 出块速度，L2 所引用的 L1 head 与真实 L1 head 之间的滞后量会随时间单调增长。这一滞后是累积型而非瞬时型，跨 region/AZ 拓扑下尤为明显——把"批量部署"从纯软件问题升级为部署拓扑约束。
+- **C3 拓扑约束**：OP Stack 的 `L1Traversal` 每次推进时将 L1 origin 向前递增一格；当 L1 RPC 查询延迟高时 origin 推进失败，后续 L2 区块复用上一个 L1 origin，L2 所引用的 L1 origin 与真实 L1 head 的差距随时间持续扩大。CDK 的 sequencer 不使用 L1 origin 追踪逻辑，不受此问题影响。这一滞后是累积型而非瞬时型，跨 region/AZ 拓扑下尤为明显——把"批量部署"从纯软件问题升级为部署拓扑约束。
 - **C4 元数据契约**：100 条链各自产出 RPC、bridge、Counter 合约地址，若无统一契约，下游 `gen-cross-tx-config` → `ydyl-bench-docker` 链路不可复用。
 
 **研究目标**（量化验收）：
@@ -121,7 +121,7 @@
 
 #### 4.4.2.2 网络拓扑设计
 
-**核心论点**：同 region 同 AZ 部署，目的是压低节点到 L1 RPC 的网络延迟。RPC 延迟一旦升高，OP/CDK 的 L2 derivation 拉取 L1 数据出现持续慢于 L1 出块速度的情况，L2 所引用的 L1 head 与真实 L1 head 之间的滞后量会随时间单调增长——这种滞后是累积型而非瞬时型，跨 region/AZ 拓扑下尤为明显。
+**核心论点**：同 region 同 AZ 部署，目的是压低节点到 L1 RPC 的网络延迟。OP Stack 的 `L1Traversal` 每次推进时通过 RPC 查询下一个 L1 区块；RPC 延迟一旦升高 origin 推进失败，后续 L2 区块复用上一个 L1 origin，L2 所引用的 L1 origin 与真实 L1 head 的差距随时间单调扩大——这种滞后是累积型而非瞬时型，跨 region/AZ 拓扑下尤为明显。CDK 的 sequencer 不使用 L1 origin 追踪逻辑，不受此影响。
 
 **与 4.2 节 C3 的关系**：4.2 C3 描述的是触达 `maxSequencerDrift` 硬阈值后的 sequencer 停摆（瞬时事故），本节描述的是更早期、更普遍的 L2 head 持续滞后现象（累积劣化）。两者是相邻而非同一问题。
 

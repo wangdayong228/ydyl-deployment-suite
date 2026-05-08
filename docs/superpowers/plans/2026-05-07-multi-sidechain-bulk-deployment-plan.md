@@ -180,7 +180,7 @@ git commit -am "docs: 4.4.2.1 控制平面与数据平面分离"
 
 **必须覆盖：**
 1. 同 region 同 AZ 部署的目的（压低节点到 L1 RPC 的延迟）
-2. 累积滞后机制：RPC 延迟升高 → derivation 拉取慢于 L1 出块 → L2 head 与 L1 head 滞后量随时间单调增长
+2. 累积滞后机制：RPC 延迟升高 → OP Stack L1 origin 推进失败 → 后续 L2 区块复用上一个 origin → L2 head 与 L1 head 滞后量随时间单调增长（CDK 不受此影响）
 3. 与 4.2 C3 的关系：4.2 C3 是触达 maxSequencerDrift 后的瞬时事故，本节是更早期、更普遍的累积劣化（**两者相邻而非同一问题**）
 4. L1 共享面边界：`BRIDGE_HUB`（全局共享）vs 各栈本链桥实现（按链独立）
 
