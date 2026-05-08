@@ -123,7 +123,7 @@
 
 **核心论点**：同 region 同 AZ 部署，目的是压低节点到 L1 RPC 的网络延迟。OP Stack 的 `L1Traversal` 每次推进时通过 RPC 查询下一个 L1 区块；RPC 延迟一旦升高 origin 推进失败，后续 L2 区块复用上一个 L1 origin，L2 所引用的 L1 origin 与真实 L1 head 的差距随时间单调扩大——这种滞后是累积型而非瞬时型，跨 region/AZ 拓扑下尤为明显。CDK 的 sequencer 不使用 L1 origin 追踪逻辑，不受此影响。
 
-**与 4.2 节 C3 的关系**：4.2 C3 描述的是触达 `maxSequencerDrift` 硬阈值后的 sequencer 停摆（瞬时事故），本节描述的是更早期、更普遍的 L2 head 持续滞后现象（累积劣化）。两者是相邻而非同一问题。
+**与 4.2 节 C3 的关系**：4.2 C3 描述的是触达 `maxSequencerDrift` 硬阈值后 sequencer 设 NoTxPool、仅出含 L1 属性存款交易的空区块、继而可能彻底停块的瞬时事故；本节描述的是更早期、更普遍的 L2 head 持续滞后现象（累积劣化）。两者是相邻而非同一问题。
 
 **L1 共享面边界**：与 `L1_BRIDGE_HUB_CONTRACT` 全局单点并列的另一组 L1 合约——XJST 的 `unified_bridge` / `state_sender` / `simple_calculator`、CDK 的 rollup 合约组、OP 的 OptimismPortal2 等——是**每条链独立**部署的，不存在跨链共享。"L1 共享"与"L1 独立"的边界精确落在 `BRIDGE_HUB` 与各栈具体桥实现之间。
 
