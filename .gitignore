@@ -7,3 +7,6 @@ logs
 .DS_Store
 doc-report
 node_modules
+.scratch
+.superpowers
+.vscode

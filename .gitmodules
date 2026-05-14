@@ -40,3 +40,6 @@
 [submodule "cdk"]
 	path = cdk
 	url = https://github.com/Pana/cdk.git
+[submodule "zkevm-prover"]
+	path = zkevm-prover
+	url = https://github.com/0xPolygon/zkevm-prover.git
