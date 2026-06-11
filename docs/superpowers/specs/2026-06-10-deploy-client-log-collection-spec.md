@@ -15,7 +15,7 @@
 | 服务端 pipe 部署 | 远端 `/home/ubuntu/ydyl-deploy-logs/{name}.log`；本地 `logs/{name}-{ip}.log` | 已有 Sync 增量同步 |
 | 服务端 Kurtosis 部署（CDK） | 远端 `/home/ubuntu/workspace/ydyl-deployment-suite/cdk-work/scripts/deploy-gen.log` | `kurtosis run` 重定向；默认 `NETWORK=gen` |
 | 服务端 Kurtosis 部署（OP） | 远端 `/home/ubuntu/workspace/ydyl-deployment-suite/op-work/scripts/deploy-gen.log` | 同上 |
-| 服务端 CDK/OP 运行 | 远端 `/home/ubuntu/ydyl-deploy-logs/{name}-runtime.log` | enclave 就绪后 follow **主要服务**日志（排除 grafana / prometheus / blockscout，见 §3.1） |
+| 服务端 CDK/OP 运行 | 远端 `/home/ubuntu/ydyl-deploy-logs/{name}-runtime.log` | enclave 就绪后 follow **主要服务**日志（按 CDK/OP 白名单保留，并过滤 DEBUG/TRACE，见 §3.1） |
 | 服务端 XJST 运行 | 远端 `/home/ubuntu/ydyl-deploy-logs/{name}-runtime.log` | 仅 node-1 机器，`docker logs -f testchain_node1` |
 
 默认 enclave：`cdk-gen` / `op-gen`（与 `cdk_pipe.sh` / `op_pipe.sh` 一致）。
@@ -32,31 +32,32 @@
 
 `log_monitor_runtime.sh` 在 enclave 就绪后：
 
-1. 解析 `kurtosis enclave inspect {enclave}` 的 **User Services** 名称列表，等待出现至少一个**主要服务**（排除规则见下）后才开始跟踪
-2. 使用 `kurtosis service logs -f -a {enclave}` 跟踪全部服务日志（`-a` = 含全量历史），经 `grep --line-buffered -Eiv 'grafana|prometheus|blockscout'` 过滤掉观测与索引组件（大小写不敏感子串匹配；这些组件日志量大且与链本体排障无关）后写入 `{name}-runtime.log`
-   - `grafana`（如 `grafana`、`grafana-1`）
-   - `prometheus`（如 `prometheus`、`prometheus-1`）
-   - `blockscout`（如 `blockscout`、`op-blockscoutop-kurtosis`）
+1. 解析 `kurtosis enclave inspect {enclave}` 的 **User Services** 名称列表，按 `--stack cdk|op` 选择服务白名单，等待出现至少一个**主要服务**后才开始跟踪
+2. 使用 `kurtosis service logs -f -a {enclave}` 跟踪全部服务日志（`-a` = 含全量历史），只保留行首 `[服务名]` 命中对应白名单的日志行，再过滤 DEBUG/TRACE 级别行后写入 `{name}-runtime.log`
+   - CDK 保留：`cdk-node-*`、`cdk-erigon-rpc-*`、`cdk-erigon-sequencer-*`、`zkevm-pool-manager-*`、`zkevm-prover-*`（条件部署）、`status-checker-*`、`zkevm-bridge-service-*`
+   - OP 保留：`op-cl-*-op-node-op-geth-op-kurtosis`、`op-el-*-op-geth-op-node-op-kurtosis`、`op-batcher-op-kurtosis`、`op-proposer-op-kurtosis`、`op-challenger-op-kurtosis`
+   - DEBUG/TRACE 过滤：OP `lvl=debug|trace`，CDK zap `DEBUG|TRACE` 独立级别字段，erigon `[dbg]` / `[trace]` 等等价级别行
 
 可靠性机制（kurtosis / docker 模式通用）：
 
 - **行缓冲**：过滤/加前缀管道必须行缓冲（`grep --line-buffered`、`sed -u`），避免输出到文件时块缓冲导致日志长时间不落盘、表现为"日志停止同步"
-- **挂死看门狗**：日志流在后台进程组运行，主进程每 10 秒检查输出文件大小；超过 `LOG_STALL_TIMEOUT`（默认 120 秒，环境变量覆盖）无增长则 kill 整个日志流进程组并重连
+- **挂死看门狗**：日志流在后台进程组运行，主进程每 10 秒检查日志活动；Kurtosis 模式基于过滤前原始流活动，Docker 模式基于输出文件增长。超过 `LOG_STALL_TIMEOUT`（默认 120 秒，环境变量覆盖）无活动则 kill 整个日志流进程组并重连
 - **重连不重放（kurtosis）**：首次连接用 `-a` 拿全量历史；之后重连改用 `-n 0`（仅跟随新增日志）。kurtosis CLI 不支持 `--since` 时间点续传，断流到重连之间的间隙日志可能丢失（已接受的能力上限；若 CLI 将 `-n 0` 按默认值处理，重复量也封顶 200 行）
 - **重连时间点衔接（docker）**：记录最后一次收到日志的时间点，重连时用 `docker logs --since <该时间点>` 衔接，避免重放全量历史
 
-典型保留服务示例（以实际 enclave inspect 为准，非硬编码白名单）：
+典型保留服务示例：
 
 | 栈 | 主要服务（示例） |
 |----|-----------------|
-| CDK | `cdk-node-*`、`cdk-erigon-*`、`zkevm-*`、`contracts-*` |
-| OP | `op-cl-*`、`op-el-*`、`op-batcher-*`、`op-proposer-*`、`op-challenger-*` |
+| CDK | `cdk-node-*`、`cdk-erigon-rpc-*`、`cdk-erigon-sequencer-*`、`zkevm-pool-manager-*`、`zkevm-prover-*`、`status-checker-*`、`zkevm-bridge-service-*` |
+| OP | `op-cl-*-op-node-op-geth-op-kurtosis`、`op-el-*-op-geth-op-node-op-kurtosis`、`op-batcher-op-kurtosis`、`op-proposer-op-kurtosis`、`op-challenger-op-kurtosis` |
 
 `log_monitor_runtime.sh` 入参约定：
 
 ```bash
 log_monitor_runtime.sh --mode kurtosis|docker \
   --output /home/ubuntu/ydyl-deploy-logs/{name}-runtime.log \
+  --stack cdk|op \                  # kurtosis 模式必填
   --enclave cdk-gen|op-gen \        # kurtosis 模式必填
   --container testchain_node1         # docker 模式必填
 ```
@@ -164,10 +165,11 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 ## 6. 依赖与风险
 
 - 宿主机需 `rsync`；远端默认 Ubuntu 自带 `gzip`
-- Kurtosis 主要服务 follow 日志仍可能较大（已排除 grafana / prometheus / blockscout），需足够磁盘（建议 ≥500GiB 系统盘，与 `config.deploy.yaml` `diskSizeGiB` 一致）
+- Kurtosis 主要服务 follow 日志仍可能较大（已按 CDK/OP 白名单保留，并过滤 DEBUG/TRACE），需足够磁盘（建议 ≥500GiB 系统盘，与 `config.deploy.yaml` `diskSizeGiB` 一致）
 - XJST 容器名默认 `testchain_node1`（`CHAIN_NAME=testchain`）；若部署时改了 `CHAIN_NAME`，需同步改监控脚本入参
 - `deploy-gen.log` 文件名依赖默认 `NETWORK=gen`；非 gen 时文件名为 `deploy-{network}.log`（当前批量部署保持 gen，见 §2 说明）
 
 ## 7. 关联 spec
 
 - 上游：[`2026-05-07-multi-sidechain-bulk-deployment-spec.md`](2026-05-07-multi-sidechain-bulk-deployment-spec.md) 4.4.4 编排链路
+- 扩展：[`2026-06-11-kurtosis-runtime-log-filter-spec.md`](2026-06-11-kurtosis-runtime-log-filter-spec.md) 运行期日志白名单与 DEBUG/TRACE 过滤

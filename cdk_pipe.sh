@@ -20,6 +20,7 @@ set -Eueo pipefail
 #    - DRYRUN: true 时只打印不转账/不执行链上操作（由 step 函数读取）
 #    - DEPLOY_RESULT_FILE: 部署产物路径（默认 $DIR/cdk-work/output/deploy-result-$NETWORK.json）
 #    - L2_VAULT_PRIVATE_KEY: L2 faucet/admin 私钥（默认从 DEPLOY_RESULT_FILE 解析）
+#    - USE_REAL_PROVER: 是否使用真实 verifier 并跳过 mock prover（默认 true；false 时启动 mock zkevm-prover）
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
 #    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1 自动生成（kurtosis 预分配账户助记词）
@@ -64,6 +65,8 @@ load_libs() {
   source "$YDYL_SCRIPTS_LIB_DIR/utils.sh"
   # shellcheck source=./ydyl-scripts-lib/pipeline_utils.sh
   source "$YDYL_SCRIPTS_LIB_DIR/pipeline_utils.sh"
+  # shellcheck source=./cdk-work/scripts/prover_env.sh
+  source "$DIR/cdk-work/scripts/prover_env.sh"
 }
 
 init_network_vars() {
@@ -155,6 +158,8 @@ record_input_vars() {
   INPUT_L1_BRIDGE_HUB_CONTRACT="${L1_BRIDGE_HUB_CONTRACT-}"
   # shellcheck disable=SC2034
   INPUT_L1_REGISTER_BRIDGE_PRIVATE_KEY="${L1_REGISTER_BRIDGE_PRIVATE_KEY-}"
+  # shellcheck disable=SC2034
+  INPUT_USE_REAL_PROVER="${USE_REAL_PROVER-}"
 }
 
 load_state_and_check_tools() {
@@ -173,6 +178,7 @@ init_persist_vars() {
     L1_VAULT_PRIVATE_KEY
     L1_BRIDGE_HUB_CONTRACT
     L1_REGISTER_BRIDGE_PRIVATE_KEY
+    USE_REAL_PROVER
 
     # 运行过程中生成/推导的变量
     ENCLAVE_NAME
@@ -208,7 +214,12 @@ check_env_compat() {
     check_input_env_consistency L1_VAULT_PRIVATE_KEY
     check_input_env_consistency L1_BRIDGE_HUB_CONTRACT
     check_input_env_consistency L1_REGISTER_BRIDGE_PRIVATE_KEY
+    check_input_env_consistency USE_REAL_PROVER
   fi
+}
+
+init_optional_env_vars() {
+  resolve_cdk_prover_env
 }
 
 require_inputs() {
@@ -278,6 +289,7 @@ main() {
   load_state_and_check_tools
   init_persist_vars
   check_env_compat
+  init_optional_env_vars
   require_inputs
   parse_start_step_and_export_restored "$@"
   load_steps
