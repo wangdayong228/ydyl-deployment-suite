@@ -28,18 +28,22 @@
 - **XJST**：仅 `node-1` 角色机器（全局 index `i%4==0`）docker 模式；脚本**内置等待容器** `testchain_node1` 存在后再 `docker logs -f`
 - 输出文件：§2 中的 `{name}-runtime.log`
 
-### 3.1 Kurtosis 运行日志服务过滤
-
-**不使用** `kurtosis service logs -a`（会纳入 grafana / prometheus / blockscout 等观测与索引组件，日志量大且与链本体排障无关）。
+### 3.1 Kurtosis 运行日志跟踪、过滤与断流恢复
 
 `log_monitor_runtime.sh` 在 enclave 就绪后：
 
-1. 解析 `kurtosis enclave inspect {enclave}` 的 **User Services** 名称列表
-2. **排除**名称（大小写不敏感，前缀或子串匹配）命中以下任一模式的服务：
+1. 解析 `kurtosis enclave inspect {enclave}` 的 **User Services** 名称列表，等待出现至少一个**主要服务**（排除规则见下）后才开始跟踪
+2. 使用 `kurtosis service logs -f -a {enclave}` 跟踪全部服务日志（`-a` = 含全量历史），经 `grep --line-buffered -Eiv 'grafana|prometheus|blockscout'` 过滤掉观测与索引组件（大小写不敏感子串匹配；这些组件日志量大且与链本体排障无关）后写入 `{name}-runtime.log`
    - `grafana`（如 `grafana`、`grafana-1`）
    - `prometheus`（如 `prometheus`、`prometheus-1`）
    - `blockscout`（如 `blockscout`、`op-blockscoutop-kurtosis`）
-3. 对其余服务执行 `kurtosis service logs -f {enclave} {svc1} {svc2} ...`，合并写入 `{name}-runtime.log`（每行前带 `[{svc}]` 前缀以便区分来源）
+
+可靠性机制（kurtosis / docker 模式通用）：
+
+- **行缓冲**：过滤/加前缀管道必须行缓冲（`grep --line-buffered`、`sed -u`），避免输出到文件时块缓冲导致日志长时间不落盘、表现为"日志停止同步"
+- **挂死看门狗**：日志流在后台进程组运行，主进程每 10 秒检查输出文件大小；超过 `LOG_STALL_TIMEOUT`（默认 120 秒，环境变量覆盖）无增长则 kill 整个日志流进程组并重连
+- **重连不重放（kurtosis）**：首次连接用 `-a` 拿全量历史；之后重连改用 `-n 0`（仅跟随新增日志）。kurtosis CLI 不支持 `--since` 时间点续传，断流到重连之间的间隙日志可能丢失（已接受的能力上限；若 CLI 将 `-n 0` 按默认值处理，重复量也封顶 200 行）
+- **重连时间点衔接（docker）**：记录最后一次收到日志的时间点，重连时用 `docker logs --since <该时间点>` 衔接，避免重放全量历史
 
 典型保留服务示例（以实际 enclave inspect 为准，非硬编码白名单）：
 
