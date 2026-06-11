@@ -99,7 +99,7 @@ KURTOSIS_OP_SERVICES_REGEX='^(op-cl-[0-9]+-op-node-op-geth-op-kurtosis|op-el-[0-
 |-----------|---------|------|
 | OP 全系 | `lvl=debug`、`lvl=trace` | `lvl=debug msg="[Sequencer] received BuildStartedEvent"` |
 | CDK zap（cdk-node 等） | `\tDEBUG\t`、`\tTRACE\t` | `2026-06-11T03:54:01.260Z\tDEBUG\treorgdetector/...` |
-| CDK erigon（cdk-erigon-*） | `[dbg]`、`[trace]`、`lvl=debug`、`lvl=trace` | erigon 多格式保守覆盖 |
+| CDK erigon（cdk-erigon-*） | `[DBUG]`、`[dbg]`、`[trace]`、`lvl=debug`、`lvl=trace` | erigon 多格式保守覆盖 |
 
 组合为一个排除正则或串联两次 `grep -Eiv`，须保持 `--line-buffered`。
 

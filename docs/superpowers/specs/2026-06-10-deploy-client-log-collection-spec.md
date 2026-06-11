@@ -36,7 +36,7 @@
 2. 使用 `kurtosis service logs -f -a {enclave}` 跟踪全部服务日志（`-a` = 含全量历史），只保留行首 `[服务名]` 命中对应白名单的日志行，再过滤 DEBUG/TRACE 级别行后写入 `{name}-runtime.log`
    - CDK 保留：`cdk-node-*`、`cdk-erigon-rpc-*`、`cdk-erigon-sequencer-*`、`zkevm-pool-manager-*`、`zkevm-prover-*`（条件部署）、`status-checker-*`、`zkevm-bridge-service-*`
    - OP 保留：`op-cl-*-op-node-op-geth-op-kurtosis`、`op-el-*-op-geth-op-node-op-kurtosis`、`op-batcher-op-kurtosis`、`op-proposer-op-kurtosis`、`op-challenger-op-kurtosis`
-   - DEBUG/TRACE 过滤：OP `lvl=debug|trace`，CDK zap `DEBUG|TRACE` 独立级别字段，erigon `[dbg]` / `[trace]` 等等价级别行
+   - DEBUG/TRACE 过滤：OP `lvl=debug|trace`，CDK zap `DEBUG|TRACE` 独立级别字段，erigon `[DBUG]` / `[dbg]` / `[trace]` 等等价级别行
 
 可靠性机制（kurtosis / docker 模式通用）：
 
@@ -85,7 +85,8 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 
 | serviceType | 远端文件 |
 |-------------|---------|
-| cdk / op / xjst | `script_status.logPath`（pipe 日志，`/home/ubuntu/ydyl-deploy-logs/{name}.log`） |
+| cdk / op | `script_status.logPath`（pipe 日志，`/home/ubuntu/ydyl-deploy-logs/{name}.log`） |
+| xjst | 同上 | 仅 node-1（组内 index=1 或全局 `(idx-1)%4==0`）参与 collect-logs；非 node-1 整台跳过 |
 | cdk | `/home/ubuntu/workspace/ydyl-deployment-suite/cdk-work/scripts/deploy-gen.log` |
 | op | `/home/ubuntu/workspace/ydyl-deployment-suite/op-work/scripts/deploy-gen.log` |
 
@@ -94,7 +95,7 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 | serviceType | 远端文件 | 备注 |
 |-------------|---------|------|
 | cdk / op | `/home/ubuntu/ydyl-deploy-logs/{name}-runtime.log` | 文件不存在则跳过并记入 manifest |
-| xjst | 同上 | 仅 node-1（`i%4==0`）收集；其余节点跳过 |
+| xjst | 同上 | 仅 node-1 机器收集（与 pipe 部署类一致；非 node-1 整台不参与 collect-logs） |
 
 每台服务器流程：
 
@@ -102,6 +103,8 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 2. SSH `gzip -c <原文件> > /tmp/ydyl-collect-{category}-{basename}.gz`（不删原文件）
 3. rsync 拉回 `logs/collected/{ip}_{name}/`
 4. 汇总写入 `logs/collected/manifest.json`（见 §5.3）
+
+过程日志：`collect-logs` 执行期间使用与 `deploy` 命令一致的标准日志输出，按服务器和目标文件打印关键阶段，便于判断长时间收集卡在 SSH 统计、远端压缩、rsync 拉取、本地重命名、远端临时文件清理或 manifest 写入中的哪一步。日志仅记录阶段、服务器、目标路径、行数、压缩包大小和跳过原因，不打印远端命令全文、不改变收集结果与 `manifest.json` 结构。
 
 ### 5.2 `stats-logs`
 
