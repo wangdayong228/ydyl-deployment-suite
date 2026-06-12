@@ -30,6 +30,6 @@
 ## Spec 间依赖
 
 - 4.4 spec 上游依赖 4.2 spec：jsonrpc-proxy 的 block hash 修正、CDK 内核侧改造、L1 origin drift 等论点在 4.2 论证后被 4.4 引用，不重述
-- 2026-06-10 日志 spec 扩展 4.4 的 `ydyl-deploy-client` 编排：新增 `collect-logs` / `stats-logs`，详见该 spec
+- 2026-06-10 日志 spec 扩展 4.4 的 `ydyl-deploy-client` 编排：新增 `collect-logs` / `stats-logs`；后续扩展远端 bench client 日志（`benchClientIP`、仅收最新 `bench-cross-tx-*.log`），详见该 spec §2 / §5.1
 - 2026-06-11 `USE_REAL_PROVER` spec 依赖 2026-05-14 kurtosis-cdk 真实 prover 能力；在 `cdk-work` 层用环境变量统一注入
 - 2026-06-11 Kurtosis 日志过滤 spec 扩展 2026-06-10 日志 spec §3.1：CDK/OP runtime 白名单 + DEBUG/TRACE 过滤

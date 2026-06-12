@@ -12,6 +12,7 @@
 |------|------|------|
 | 客户端 deploy | `logs/client/deploy-{ts}.log` | deploy 命令 stdout+stderr 自动 tee |
 | 客户端 bench | `logs/client/bench-cross-tx-{ts}.log` | bench-cross-tx 命令 stdout+stderr 自动 tee |
+| 远端 bench client | `/home/ubuntu/workspace/ydyl-deployment-suite/ydyl-deploy-client/{logDir}/client/bench-cross-tx-{ts}.log` | 与 bench-cross-tx 本地 tee 路径结构一致（默认 `{logDir}=logs`）；人工在 bench client 上执行压测后落盘 |
 | 服务端 pipe 部署 | 远端 `/home/ubuntu/ydyl-deploy-logs/{name}.log`；本地 `logs/{name}-{ip}.log` | 已有 Sync 增量同步 |
 | 服务端 Kurtosis 部署（CDK） | 远端 `/home/ubuntu/workspace/ydyl-deployment-suite/cdk-work/scripts/deploy-gen.log` | `kurtosis run` 重定向；默认 `NETWORK=gen` |
 | 服务端 Kurtosis 部署（OP） | 远端 `/home/ubuntu/workspace/ydyl-deployment-suite/op-work/scripts/deploy-gen.log` | 同上 |
@@ -97,6 +98,16 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 | cdk / op | `/home/ubuntu/ydyl-deploy-logs/{name}-runtime.log` | 文件不存在则跳过并记入 manifest |
 | xjst | 同上 | 仅 node-1 机器收集（与 pipe 部署类一致；非 node-1 整台不参与 collect-logs） |
 
+**bench client（client，不依赖 script_status.json）**
+
+| 配置项 | 远端文件 | 备注 |
+|--------|---------|------|
+| `benchClientIP` | `{remoteRepoDir}/ydyl-deploy-client/{logDir}/client/bench-cross-tx-*.log` | IP 为空则跳过；仅收集文件名时间戳最新的一条 |
+
+- 远端目录默认：`/home/ubuntu/workspace/ydyl-deployment-suite/ydyl-deploy-client/logs/client`
+- 本地目录：`logs/collected/{benchClientIP}_bench-client/`
+- manifest：`ip=benchClientIP`，`name=bench-client`，`serviceType=bench`，`category=client`
+
 每台服务器流程：
 
 1. SSH 对存在的文件执行 `wc -l`，记录行数（压缩前）
@@ -150,7 +161,7 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 }
 ```
 
-`category` 取值：`deploy` | `runtime`。`skipped=true` 时 `lines` 为 0。
+`category` 取值：`deploy` | `runtime` | `client`（bench client 压测日志）。`skipped=true` 时 `lines` 为 0。
 
 ### 5.4 `log_stats.csv` 列
 
@@ -171,6 +182,7 @@ log_monitor_runtime.sh --mode kurtosis|docker \
 - Kurtosis 主要服务 follow 日志仍可能较大（已按 CDK/OP 白名单保留，并过滤 DEBUG/TRACE），需足够磁盘（建议 ≥500GiB 系统盘，与 `config.deploy.yaml` `diskSizeGiB` 一致）
 - XJST 容器名默认 `testchain_node1`（`CHAIN_NAME=testchain`）；若部署时改了 `CHAIN_NAME`，需同步改监控脚本入参
 - `deploy-gen.log` 文件名依赖默认 `NETWORK=gen`；非 gen 时文件名为 `deploy-{network}.log`（当前批量部署保持 gen，见 §2 说明）
+- bench client 上 `logDir` 配置须与压测时 `config.deploy.yaml` 一致，否则 `collect-logs` 目录可能对不上
 
 ## 7. 关联 spec
 
