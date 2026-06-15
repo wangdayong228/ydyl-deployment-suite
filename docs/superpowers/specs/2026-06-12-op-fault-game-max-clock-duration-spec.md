@@ -36,13 +36,13 @@ FAULT_GAME_MAX_CLOCK_DURATION（尚不存在）
 - 经现有 `envsubst` 注入 `params.template.yml`，不引入新工具链
 - **默认值 `24`**，与当前演示环境行为一致
 - `op_pipe.sh` 的 `PERSIST_VARS` + `check_input_env_consistency` 支持续跑一致性
+- `ydyl-deploy-client deploy` 可通过 `config.deploy.yaml` 的 `faultGameMaxClockDuration` 将该值透传到远端 `op_pipe.sh`
 - Permissioned game 与 additional game **使用同一 max 值**
 
 ## 非目标
 
 - **不**将 `FAULT_GAME_CLOCK_EXTENSION`（固定 **12**）、`PREIMAGE_ORACLE_CHALLENGE_PERIOD`（固定 **0**）暴露为用户可配项
 - **不**在本 spec 中改动 `proofMaturityDelaySeconds` / `disputeGameFinalityDelaySeconds` / `faultGameWithdrawalDelay`（仍由 `contract_deployer.star` 现有 demo 默认值 12 / 0 / 12 提供）
-- **不**改 `ydyl-deploy-client` 远程 env 透传（后续可扩展）；经 deploy-client 触发的 OP 部署在实现完成前仍使用 optimism-package 内置 demo 默认值
 - **不**在 `params.template.yml` 中增加除 `faultGameMaxClockDuration` 以外的 `global_deploy_overrides` 字段（其它 dispute delay 继续由 `contract_deployer.star` 内置 demo dict 提供）
 - **不**将 demo 秒级参数（`proofMaturityDelaySeconds` 等）下沉到 `input_parser` 默认值，避免与 `contract_deployer.star` 双处维护
 - **不**支持已部署 enclave 热更新（合约 immutable，需 `FORCE_DEPLOY_OP=true` 重部署）；仅改 env 且 step4 因 enclave 已存在而跳过时，链上参数不会变
@@ -94,6 +94,9 @@ max(clockExtension × 2, clockExtension + oracleChallengePeriod) ≤ maxClockDur
 | `op-work/scripts/dispute_clock_env.test.sh` | 默认值、显式值、非法值、模板渲染、无残留占位符、`op_pipe.sh` 一致性挂钩 |
 | `op-work/scripts/deploy.sh` | `run_deploy` 前 `source dispute_clock_env.sh`；实现后更新 `OP_PACKAGE_LOCATOR` commit |
 | `op_pipe.sh` | 头部可选变量；`record_input_vars`；`PERSIST_VARS`；`check_env_compat`；启动时调用解析函数 |
+| `ydyl-deploy-client/internal/deploy/config.go` | 增加 `faultGameMaxClockDuration` 配置项和本地校验 |
+| `ydyl-deploy-client/internal/deploy/deploy.go` | 内置 OP 远程命令透传 `FAULT_GAME_MAX_CLOCK_DURATION` |
+| `ydyl-deploy-client/config.deploy.example.yaml` / `README.md` | 说明 deploy-client 配置方式 |
 | `optimism-package/src/package_io/sanity_check.star` | `OP_CONTRACT_DEPLOYER_GLOBAL_DEPLOY_OVERRIDES` 增加 `faultGameMaxClockDuration` |
 | `optimism-package/src/package_io/input_parser.star` | 对 `global_deploy_overrides` **深合并**（保留 `faultGameAbsolutePrestate` 等 parser 默认键） |
 | `optimism-package/src/contracts/contract_deployer.star` | **`DEMO_GLOBAL_DEPLOY_OVERRIDES` + YAML 覆盖**（主逻辑）；两套 game 同源 |
@@ -146,7 +149,21 @@ export FAULT_GAME_MAX_CLOCK_DURATION
 
 `dispute_clock_env.test.sh` 除 env 解析与模板渲染外，应断言 `op_pipe.sh` 含 `INPUT_FAULT_GAME_MAX_CLOCK_DURATION`、`check_input_env_consistency FAULT_GAME_MAX_CLOCK_DURATION`、`resolve_op_dispute_clock_env`（或实际函数名）等挂钩（参考 [`cdk-work/scripts/prover_env.test.sh`](../../cdk-work/scripts/prover_env.test.sh)）。
 
-### 5. `optimism-package` — `sanity_check.star`
+### 5. `ydyl-deploy-client` 远程透传
+
+`ydyl-deploy-client/internal/deploy/config.go` 在 `CommonConfig` 增加：
+
+```yaml
+faultGameMaxClockDuration: "600"
+```
+
+为空时不拼接该环境变量，远端 `op_pipe.sh` 使用默认 `24`；非空时先做与 `op_pipe.sh` 一致的本地校验（无前导零、正整数、`>= 24`），再在内置 OP 远程命令中追加：
+
+```bash
+FAULT_GAME_MAX_CLOCK_DURATION=<value> ./op_pipe.sh
+```
+
+### 6. `optimism-package` — `sanity_check.star`
 
 `OP_CONTRACT_DEPLOYER_GLOBAL_DEPLOY_OVERRIDES` 至少增加：
 
@@ -156,7 +173,7 @@ export FAULT_GAME_MAX_CLOCK_DURATION
 
 否则 kurtosis 包在解析 args 时会因字段不在白名单而失败。
 
-### 6. `optimism-package` — `input_parser.star`（辅助：深合并）
+### 7. `optimism-package` — `input_parser.star`（辅助：深合并）
 
 `op_contract_deployer_params` 仍为浅 `update`，但对嵌套 dict **`global_deploy_overrides` 单独深合并**，避免模板只写 `faultGameMaxClockDuration` 时丢失 parser 默认键：
 
@@ -262,10 +279,12 @@ DRYRUN=true FAULT_GAME_MAX_CLOCK_DURATION=600 op-work/scripts/deploy.sh op-gen
 5. `FORCE_DEPLOY_OP=true` 重部署后，部署产物 `op-work/output/op-deployer-configs-<enclave>/intent-merged.json`（或等价 merge 后 intent）中，`globalDeployOverrides.faultGameMaxClockDuration` 与 `chains[].dangerousAdditionalDisputeGames[].faultGameMaxClockDuration` 均为配置值
 6. optimism-package sanity check 通过（新 YAML 字段在白名单内）
 7. 模板仅含 `faultGameMaxClockDuration` 时，`contract_deployer` 不因缺少 `faultGameAbsolutePrestate` 键而失败（parser 深合并 + deployer `.get`）
+8. `ydyl-deploy-client` 设置 `faultGameMaxClockDuration: "600"` 时，内置 OP 远程命令包含 `FAULT_GAME_MAX_CLOCK_DURATION=600 ./op_pipe.sh`
+9. `ydyl-deploy-client` 的 `forceDeployL2Chain` 在 OP 内置远程命令中映射为 `FORCE_DEPLOY_OP`，确保修改 immutable 棋钟参数后可触发重部署
 
 ## 关联 spec
 
 - 上游：[`2026-05-06-rollup-sidechain-integration-spec`](2026-05-06-rollup-sidechain-integration-spec.md)（dispute 参数秒级压缩背景）
 - 模式参考：[`2026-06-11-cdk-use-real-prover-env-spec`](2026-06-11-cdk-use-real-prover-env-spec.md)（envsubst + 流水线持久化）
 - 领域文档：[`op-work/doc/l2-withdrawal-and-fault-proof.md`](../../op-work/doc/l2-withdrawal-and-fault-proof.md)、[`op-work/doc/note.md`](../../op-work/doc/note.md)
-- 可扩展：[`2026-05-07-multi-sidechain-bulk-deployment-spec`](2026-05-07-multi-sidechain-bulk-deployment-spec.md)（`ydyl-deploy-client` 远程 env 透传）
+- 扩展：[`2026-05-07-multi-sidechain-bulk-deployment-spec`](2026-05-07-multi-sidechain-bulk-deployment-spec.md)（`ydyl-deploy-client` 远程 env 透传）
