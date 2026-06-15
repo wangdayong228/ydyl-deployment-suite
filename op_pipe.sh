@@ -21,6 +21,7 @@ set -Eueo pipefail
 #    - DRYRUN: true 时只打印不转账/不执行链上操作（由 step 函数读取）
 #    - ENABLE_L1_RPC_RROXY: true 时跳过 jsonrpc-proxy，直接用 L1_RPC_URL 作为 L1_RPC_URL_PROXY（变量名历史拼写保留）
 #      当前 run_all_steps() 默认会把它设为 true，因此 OP 流水线通常不会真正启动 jsonrpc-proxy
+#    - FAULT_GAME_MAX_CLOCK_DURATION: dispute game 棋钟上限秒数（默认 24；须 >= 24）
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
 #    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1/生成函数自动生成（kurtosis 预分配账户助记词）
@@ -115,6 +116,8 @@ record_input_vars() {
     INPUT_L1_BRIDGE_HUB_CONTRACT="${L1_BRIDGE_HUB_CONTRACT-}"
     # shellcheck disable=SC2034
     INPUT_L1_REGISTER_BRIDGE_PRIVATE_KEY="${L1_REGISTER_BRIDGE_PRIVATE_KEY-}"
+    # shellcheck disable=SC2034
+    INPUT_FAULT_GAME_MAX_CLOCK_DURATION="${FAULT_GAME_MAX_CLOCK_DURATION-}"
 }
 
 load_state_and_check_tools() {
@@ -135,6 +138,7 @@ init_persist_vars() {
         KURTOSIS_L1_FUND_VAULT_ADDRESS
         L1_BRIDGE_HUB_CONTRACT
         L1_REGISTER_BRIDGE_PRIVATE_KEY
+        FAULT_GAME_MAX_CLOCK_DURATION
 
         # 运行过程中生成/推导的变量
         ENCLAVE_NAME
@@ -167,7 +171,14 @@ check_env_compat() {
         check_input_env_consistency KURTOSIS_L1_FUND_VAULT_ADDRESS
         check_input_env_consistency L1_BRIDGE_HUB_CONTRACT
         check_input_env_consistency L1_REGISTER_BRIDGE_PRIVATE_KEY
+        check_input_env_consistency FAULT_GAME_MAX_CLOCK_DURATION
     fi
+}
+
+init_optional_env_vars() {
+    # shellcheck source=op-work/scripts/dispute_clock_env.sh
+    source "$DIR/op-work/scripts/dispute_clock_env.sh"
+    resolve_op_dispute_clock_env
 }
 
 require_inputs() {
@@ -295,6 +306,7 @@ main() {
     load_state_and_check_tools
     init_persist_vars
     check_env_compat
+    init_optional_env_vars
     require_inputs
     parse_start_step_and_export_restored "$@"
     run_all_steps
