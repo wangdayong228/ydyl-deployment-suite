@@ -111,8 +111,95 @@ EOF
 ########################################
 # STEP4: 部署 kurtosis cdk - CDK 专属
 ########################################
+
+# 确保 cdk-erigon Docker 镜像与本地代码一致
+# 如果本地有未提交修改，或源码提交时间晚于镜像创建时间，则自动重新构建
+ensure_cdk_erigon_image() {
+  local erigon_dir="$DIR/cdk-erigon"
+  local image_tag="hermeznetwork/cdk-erigon:local"
+
+  if [[ ! -d "$erigon_dir" ]]; then
+    echo "警告: cdk-erigon 目录不存在 ($erigon_dir)，跳过镜像构建"
+    return 0
+  fi
+
+  local source_ts
+  source_ts=$(cd "$erigon_dir" && git log -1 --format=%ct 2>/dev/null) || { echo "警告: 无法获取 cdk-erigon 提交时间"; return 0; }
+
+  local has_changes=false
+  if [[ -n "$(cd "$erigon_dir" && git status --porcelain 2>/dev/null)" ]]; then
+    has_changes=true
+  fi
+
+  local image_created image_ts
+  image_created=$(docker image inspect "$image_tag" --format='{{.Created}}' 2>/dev/null || true)
+  image_ts=$(date -d "$image_created" +%s 2>/dev/null || echo 0)
+
+  if ! docker image inspect "$image_tag" &>/dev/null; then
+    echo "cdk-erigon 镜像不存在，需要构建"
+  elif [[ "$image_ts" -ge "$source_ts" ]]; then
+    echo "cdk-erigon 镜像 ($image_ts) 不早于源码 ($source_ts)，无需重建"
+    return 0
+  elif [[ "$has_changes" == "true" ]]; then
+    echo "cdk-erigon 本地有未提交修改且镜像 ($image_ts) 早于源码 ($source_ts)，需要重新构建镜像"
+  else
+    echo "cdk-erigon 源码提交时间 ($source_ts) 晚于镜像创建时间 ($image_ts)，需要重新构建"
+  fi
+
+  echo "开始构建 cdk-erigon Docker 镜像（这可能需要几分钟）..."
+  cd "$erigon_dir"
+  docker build --no-cache -t "$image_tag" . 2>&1 | tail -20
+  echo "cdk-erigon 镜像构建完成"
+}
+
+# 确保 cdk-node Docker 镜像与本地代码一致
+# cdk-node 使用 agglayer keystore 签名 L1 验证交易，必须与本地 aggregator 修复保持一致
+ensure_cdk_node_image() {
+  local cdk_dir="$DIR/cdk"
+  local image_tag="davidyoung2025/cdk:local"
+
+  if [[ ! -d "$cdk_dir" ]]; then
+    echo "警告: cdk 目录不存在 ($cdk_dir)，跳过镜像构建"
+    return 0
+  fi
+
+  local source_ts
+  source_ts=$(cd "$cdk_dir" && git log -1 --format=%ct 2>/dev/null) || { echo "警告: 无法获取 cdk 提交时间"; return 0; }
+
+  local has_changes=false
+  if [[ -n "$(cd "$cdk_dir" && git status --porcelain 2>/dev/null)" ]]; then
+    has_changes=true
+  fi
+
+  local image_created image_ts
+  image_created=$(docker image inspect "$image_tag" --format='{{.Created}}' 2>/dev/null || true)
+  image_ts=$(date -d "$image_created" +%s 2>/dev/null || echo 0)
+
+  if ! docker image inspect "$image_tag" &>/dev/null; then
+    echo "cdk-node 镜像不存在，需要构建"
+  elif [[ "$image_ts" -ge "$source_ts" ]]; then
+    echo "cdk-node 镜像 ($image_ts) 不早于源码 ($source_ts)，无需重建"
+    return 0
+  elif [[ "$has_changes" == "true" ]]; then
+    echo "cdk-node 本地有未提交修改且镜像 ($image_ts) 早于源码 ($source_ts)，需要重新构建镜像"
+  else
+    echo "cdk-node 源码提交时间 ($source_ts) 晚于镜像创建时间 ($image_ts)，需要重新构建"
+  fi
+
+  echo "开始构建 cdk-node Docker 镜像（这可能需要几分钟）..."
+  cd "$cdk_dir"
+  make build-docker 2>&1 | tail -20
+  docker tag cdk "$image_tag"
+  echo "cdk-node 镜像构建完成: $image_tag"
+}
+
 step4_deploy_kurtosis_cdk() {
   : "${L1_RPC_URL_PROXY:?L1_RPC_URL_PROXY 未设置，请先运行 STEP3 启动 jsonrpc-proxy}"
+
+  # 确保本地代码修改都被打包进 Docker 镜像，否则 aggregator 签名钱包等修复不会生效
+  ensure_cdk_erigon_image
+  ensure_cdk_node_image
+
   # 只对 deploy.sh 这一条命令临时注入 L1_RPC_URL，不污染当前 shell 的 L1_RPC_URL
   pushd "$DIR/cdk-work" >/dev/null
   YDYL_NO_TRAP=1 L1_RPC_URL="$L1_RPC_URL_PROXY" "$DIR"/cdk-work/scripts/deploy.sh "$ENCLAVE_NAME"
@@ -142,6 +229,40 @@ step6_gen_zk_claim_env() {
 ########################################
 step8_start_zk_claim_service() {
   cd "$DIR"/zk-claim-service && yarn && yarn run start
+}
+
+
+########################################
+# STEP13: 发送 L2 测试交易触发 batch close
+# 目的：cdk-erigon 不支持 eip1559，因此需要 --legacy + --gas-price；
+#      发送到 0x...dead（普通地址，非合约）以避免 transfer revert；
+#      触发 sequence-sender 在 batch-seal-time（15s）后关闭 batch 并发送
+#      SequenceBatches 事件到 L1，进而让 aggregator 能为外部 prover 生成
+#      证明任务。
+# 失败重试：3 次，间隔 5s。
+########################################
+step_send_l2_test_tx() {
+	if [[ "${DRYRUN:-}" = "true" ]]; then
+		echo "🔹 DRYRUN 模式: 跳过 L2 测试交易（不发送）"
+		return 0
+	fi
+	if [[ -z "${L2_PRIVATE_KEY:-}" ]] || [[ -z "${L2_RPC_URL:-}" ]]; then
+		echo "❌ STEP13 失败: L2_PRIVATE_KEY 或 L2_RPC_URL 未设置"
+		return 1
+	fi
+	# 0x...dead 必须是普通 EOA 接收方，cdk-erigon sequencer 是 cdk-erigon，
+	# 不支持 eip1559（cast send 默认 eip1559），因此显式 --legacy
+	echo "🔹 STEP13: 发送 1 笔 L2 测试交易（1 wei -> 0x...dead）以触发 batch close"
+	run_with_retry 3 5 cast send \
+		--legacy \
+		--rpc-url "$L2_RPC_URL" \
+		--private-key "$L2_PRIVATE_KEY" \
+		--value 1 \
+		--gas-price 1000000000 \
+		0x000000000000000000000000000000000000dead \
+		--rpc-timeout 60 \
+		|| return 1
+	echo "🔹 STEP13 完成: L2 测试交易已发送，sequence-sender 将在 batch-seal-time 后关闭 batch"
 }
 
 record_input_vars() {
@@ -202,6 +323,8 @@ init_persist_vars() {
     METADATA_FILE
     L2_COUNTER_CONTRACT
     CLAIM_SERVICE_PRIVATE_KEY
+    # step3 启动 jsonrpc-proxy 后生成；step4 部署 kurtosis 时使用
+    L1_RPC_URL_PROXY
 
     # 流水线状态：running/success/failed
     PIPELINE_STATUS
@@ -273,7 +396,8 @@ run_all_steps() {
   run_step 9 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
   run_step 10 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
   run_step 11 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
-  run_step 12 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
+  run_step 12 "发送 L2 测试交易触发 batch close" step_send_l2_test_tx
+  run_step 13 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
 
   # shellcheck disable=SC2034  # 该变量通过 PERSIST_VARS 间接写入 state 文件
   PIPELINE_STATUS="success"
