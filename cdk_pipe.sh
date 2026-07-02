@@ -93,6 +93,8 @@ generate_cdk_fund_vault_address() {
 step3_start_jsonrpc_proxy() {
   cd "$DIR"/jsonrpc-proxy || return 1
   # shellcheck disable=SC2153 # 相关变量由调用方负责初始化与校验
+  # Stop old instances before starting new one
+  pm2 delete jsonrpc-proxy-cdk 2>/dev/null || true
   cat >.env_cdk <<EOF
 CORRECT_BLOCK_HASH=false
 LOOP_CORRECT_BLOCK_HASH=false
