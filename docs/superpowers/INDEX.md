@@ -16,7 +16,7 @@
 | 2026-05-06 | [Rollup 侧链接入方案](specs/2026-05-06-rollup-sidechain-integration-spec.md) | 4.2 | `doc-report/4.2-rollup-sidechain-integration.md` | 大勇 |
 | 2026-05-07 | [多类型侧链规模化部署](specs/2026-05-07-multi-sidechain-bulk-deployment-spec.md) | 4.4 | `doc-report/4.4-multi-sidechain-bulk-deployment.md`（待写） | 大勇 |
 | 2026-06-10 | [deploy-client 日志收集与统计](specs/2026-06-10-deploy-client-log-collection-spec.md) | 4.4 扩展 | — | 大勇 |
-| 2026-06-11 | [CDK `USE_REAL_PROVER` 环境变量](specs/2026-06-11-cdk-use-real-prover-env-spec.md) | — | `cdk-work/scripts/params.template.yml`、`cdk_pipe.sh` | 大勇 |
+| 2026-06-11 | [CDK `USE_REAL_PROVER` 环境变量](specs/2026-06-11-cdk-use-real-prover-env-spec.md) | — | `cdk-work/scripts/params.template.yml`、`cdk_pipe.sh`、`ydyl-deploy-client/internal/deploy/*` | 大勇 |
 | 2026-06-11 | [Kurtosis 运行期日志白名单与 DEBUG/TRACE 过滤](specs/2026-06-11-kurtosis-runtime-log-filter-spec.md) | 4.4 扩展 | `ydyl-scripts-lib/log_monitor_runtime.sh`、`ydyl-deploy-client` | 大勇 |
 | 2026-06-12 | [OP `FAULT_GAME_MAX_CLOCK_DURATION` 环境变量](specs/2026-06-12-op-fault-game-max-clock-duration-spec.md) | — | `op-work/scripts/params.template.yml`、`optimism-package`、`op_pipe.sh` | 大勇 |
 

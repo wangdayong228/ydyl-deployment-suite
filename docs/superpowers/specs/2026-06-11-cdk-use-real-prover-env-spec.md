@@ -23,7 +23,6 @@ zkevm_use_mock_prover_client: true
 
 - 不修改 kurtosis-cdk 包内逻辑（已由 2026-05-14 spec 覆盖）
 - 本阶段不启用 `zkevm_use_real_prover_client`（700GB+ RAM 真实证明生成），该字段固定为 `false`
-- 本阶段不强制改 `ydyl-deploy-client` 远程命令拼接（可后续按需加配置项）
 
 ## 变量映射
 
@@ -55,6 +54,8 @@ zkevm_use_mock_prover_client: true
 | `cdk-work/scripts/deploy.sh` | 在 `prepare_cdk_env` 中调用公共解析函数 |
 | `cdk_pipe.sh` | 头部注释补充可选变量；`PERSIST_VARS` 与一致性校验加入 `USE_REAL_PROVER` 以支持续跑 |
 | `cdk-work/scripts/prover_env.test.sh` | 覆盖默认值、显式值、非法值、模板渲染和父流程一致性挂钩 |
+| `ydyl-deploy-client/internal/deploy/config.go` | 新增 `cdkUseRealProver` 全局配置项（默认 `false`） |
+| `ydyl-deploy-client/internal/deploy/deploy.go` | CDK 内置远程命令显式透传 `USE_REAL_PROVER` |
 
 ## 详细设计
 
@@ -98,6 +99,14 @@ export USE_REAL_PROVER USE_MOCK_PROVER
 
 `step4_deploy_kurtosis_cdk` 无需改代码：子进程继承父 shell 已解析并导出的环境变量即可。
 
+### 5. `ydyl-deploy-client` 远程透传
+
+- `CommonConfig` 增加 `cdkUseRealProver`（`yaml:"cdkUseRealProver"`），默认值为 `false`
+- `buildRemoteCommandForIndex` 在 `ServiceTypeCDK` 分支固定拼接 `USE_REAL_PROVER=%t`
+- 通过 `ydyl-deploy-client deploy` 执行 CDK 时，若 YAML 未设置该字段，也会显式传 `USE_REAL_PROVER=false`
+
+说明：这会与直接运行 `./cdk_pipe.sh` 的默认值（`USE_REAL_PROVER=true`）形成有意差异，目的是让批量部署默认启用 mock prover 以便压测/演示环境快速起链。
+
 ## 使用方式
 
 ```bash
@@ -108,6 +117,15 @@ export USE_REAL_PROVER USE_MOCK_PROVER
 USE_REAL_PROVER=false ./cdk_pipe.sh
 ```
 
+```bash
+# 通过 ydyl-deploy-client 批量部署 CDK（默认显式透传 USE_REAL_PROVER=false）
+cd ydyl-deploy-client
+go run . deploy -f ./config.deploy.yaml
+
+# 如需真实 verifier，可在配置中设置：
+# cdkUseRealProver: true
+```
+
 ## 验收标准
 
 1. 未设置 `USE_REAL_PROVER` 时，渲染后的 `params-<network>.yml` 中三字段为 `true` / `false` / `false`
@@ -115,6 +133,8 @@ USE_REAL_PROVER=false ./cdk_pipe.sh
 3. `cdk_pipe.sh` 续跑时 `USE_REAL_PROVER` 从 `output/cdk_pipe.state` 恢复一致
 4. `envsubst` 后无残留 `$USE_REAL_PROVER` / `$USE_MOCK_PROVER` 占位符
 5. `USE_REAL_PROVER` 为非 `true` / `false` 值时，脚本失败且不渲染非布尔 YAML
+6. `ydyl-deploy-client` 默认配置下，CDK 内置远程命令包含 `USE_REAL_PROVER=false`
+7. `cdkUseRealProver: true` 时，CDK 内置远程命令包含 `USE_REAL_PROVER=true`
 
 ## 关联 spec
 
