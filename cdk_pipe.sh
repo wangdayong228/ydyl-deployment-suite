@@ -116,7 +116,7 @@ EOF
 # 如果本地有未提交修改，或源码提交时间晚于镜像创建时间，则自动重新构建
 ensure_cdk_erigon_image() {
   local erigon_dir="$DIR/cdk-erigon"
-  local image_tag="hermeznetwork/cdk-erigon:local"
+  local image_tag="davidyoung2025/cdk-erigon:local"
 
   if [[ ! -d "$erigon_dir" ]]; then
     echo "警告: cdk-erigon 目录不存在 ($erigon_dir)，跳过镜像构建"
