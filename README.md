@@ -462,6 +462,7 @@ cd ydyl-gen-accounts
 npm i
 npm run build
 npm run start -- --fundAmount 1000 --processes 1 --capacity 20000000
+npm run stop   # 停止创建账户（保留进度与 contracts.json；彻底清理用 npm run clean）
 ```
 
 ### `ydyl-bench-docker`
