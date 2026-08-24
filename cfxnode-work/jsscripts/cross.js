@@ -1,10 +1,10 @@
 const {Conflux, format, Drip} = require('js-conflux-sdk');
 const ethers = require('ethers');
 
-const provider = new ethers.JsonRpcProvider('http://34.219.245.189:8545');
+const provider = new ethers.JsonRpcProvider('http://184.33.95.68:8545');
 
 const cfx = new Conflux({
-    url: 'http://34.219.245.189:12537',
+    url: 'http://184.33.95.68:12537',
     networkId: 7654,
 });
 

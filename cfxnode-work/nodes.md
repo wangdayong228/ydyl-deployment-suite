@@ -3,6 +3,35 @@
 - 52.12.11.65
 - 16.148.64.138
 
+## conflux-rust 版本
+https://github.com/Pana/conflux-rust/tree/devnet3
+
+安装 rust 编译相关依赖
+```sh
+sudo apt-get update
+sudo apt-get install -y build-essential clang libsqlite3-dev pkg-config libssl-dev cmake
+```
+
+编译
+```sh
+# 清掉上次用 gcc 配出来的 cmake 缓存
+rm -rf target/release/build/libtitan_sys-*
+CC=clang CXX=clang++ cargo b -r --features align_evm
+```
+
+配置 python 虚拟环境
+```sh
+sudo apt-get update
+sudo apt-get install -y python3-pip python3-venv
+cd /home/ubuntu/workspace/conflux-rust
+python3 -m venv .venv
+source .venv/bin/activate
+pip install rlp eth-utils coincurve safe-pysha3 py-ecc
+```
+
+
+
+
 ## 私链 有钱账户
 ```sh
 Successfully created new keypair.
