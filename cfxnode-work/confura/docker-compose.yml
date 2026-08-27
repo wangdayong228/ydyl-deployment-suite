@@ -48,7 +48,7 @@ services:
         required: false
     environment:
       - INFURA_STORE_MYSQL_ENABLED=true
-      - INFURA_STORE_MYSQL_DSN=root:root@tcp(db:3306)/confura_cfx?parseTime=true
+      - INFURA_STORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_cfx?parseTime=true
       - INFURA_METRICS_ENABLED=true
       - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
       - INFURA_METRICS_INFLUXDB_DB=confura_testnet
@@ -68,7 +68,7 @@ services:
         required: false
     environment:
       - INFURA_ETHSTORE_MYSQL_ENABLED=true
-      - INFURA_ETHSTORE_MYSQL_DSN=root:root@tcp(db:3306)/confura_eth?parseTime=true
+      - INFURA_ETHSTORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_eth?parseTime=true
       - INFURA_METRICS_ENABLED=true
       - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
       - INFURA_METRICS_INFLUXDB_DB=confura_testnet
@@ -91,7 +91,7 @@ services:
         required: false
     environment:
       - INFURA_STORE_MYSQL_ENABLED=true
-      - INFURA_STORE_MYSQL_DSN=root:root@tcp(db:3306)/confura_cfx?parseTime=true
+      - INFURA_STORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_cfx?parseTime=true
       - INFURA_METRICS_ENABLED=true
       - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
       - INFURA_METRICS_INFLUXDB_DB=confura_testnet
@@ -111,7 +111,7 @@ services:
         required: false
     environment:
       - INFURA_ETHSTORE_MYSQL_ENABLED=true
-      - INFURA_ETHSTORE_MYSQL_DSN=root:root@tcp(db:3306)/confura_eth?parseTime=true
+      - INFURA_ETHSTORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_eth?parseTime=true
       - INFURA_METRICS_ENABLED=true
       - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
       - INFURA_METRICS_INFLUXDB_DB=confura_testnet
@@ -134,7 +134,7 @@ services:
         required: false
     environment:
       - INFURA_STORE_MYSQL_ENABLED=true
-      - INFURA_STORE_MYSQL_DSN=root:root@tcp(db:3306)/confura_cfx?parseTime=true
+      - INFURA_STORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_cfx?parseTime=true
       - INFURA_NODE_ROUTER_NODERPCURL=http://node-management:22530
       - INFURA_VIRTUALFILTERS_CLIENT_ENABLED=true
       - INFURA_VIRTUALFILTERS_CLIENT_SERVICERPCURL=http://virtual-filter:42537
@@ -160,7 +160,7 @@ services:
         required: false
     environment:
       - INFURA_ETHSTORE_MYSQL_ENABLED=true
-      - INFURA_ETHSTORE_MYSQL_DSN=root:root@tcp(db:3306)/confura_eth?parseTime=true
+      - INFURA_ETHSTORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_eth?parseTime=true
       - INFURA_NODE_ROUTER_ETHNODERPCURL=http://ethnode-management:28530
       - INFURA_ETHVIRTUALFILTERS_CLIENT_ENABLED=true
       - INFURA_ETHVIRTUALFILTERS_CLIENT_SERVICERPCURL=http://ethvirtual-filter:48545
