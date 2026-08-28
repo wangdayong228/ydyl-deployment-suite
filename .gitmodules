@@ -46,3 +46,6 @@
 [submodule "cdk-erigon"]
 	path = cdk-erigon
 	url = https://github.com/wangdayong228/cdk-erigon.git
+[submodule "zkevm-bridge-service"]
+	path = zkevm-bridge-service
+	url = https://github.com/wangdayong228/zkevm-bridge-service.git
