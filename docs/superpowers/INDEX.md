@@ -20,6 +20,7 @@
 | 2026-06-11 | [Kurtosis 运行期日志白名单与 DEBUG/TRACE 过滤](specs/2026-06-11-kurtosis-runtime-log-filter-spec.md) | 4.4 扩展 | `ydyl-scripts-lib/log_monitor_runtime.sh`、`ydyl-deploy-client` | 大勇 |
 | 2026-06-12 | [OP `FAULT_GAME_MAX_CLOCK_DURATION` 环境变量](specs/2026-06-12-op-fault-game-max-clock-duration-spec.md) | — | `op-work/scripts/params.template.yml`、`optimism-package`、`op_pipe.sh` | 大勇 |
 | 2026-08-28 | [流水线 step2 L1 余额差额补足](specs/2026-08-28-l1-fund-top-up-spec.md) | — | `ydyl-scripts-lib/utils.sh`、`ydyl-scripts-lib/pipeline_steps_lib.sh` | 大勇 |
+| 2026-08-30 | [XJST ENABLE_BRIDGE + step2 L1 金额可配置](specs/2026-08-30-xjst-enable-bridge-spec.md) | — | `xjst_pipe.sh`、`ydyl-scripts-lib/*`、`ydyl-deploy-client/internal/deploy/*` | 大勇 |
 
 ## Plans
 

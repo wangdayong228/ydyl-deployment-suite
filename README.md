@@ -219,6 +219,8 @@ XJST 特有点：
   - `web3==6.20.1`
   - `eth-account==0.10.0`
 - node-1 会通过 `ydyl-console-service` API 拉取 L1 合约部署结果，再驱动各节点部署
+- `ENABLE_BRIDGE`（默认 `true`）：`false` 时跳过 step2 L1 跨链打款、Counter/bridge 注册及 metadata；主链只测 gen-accounts 时可设 `ENABLE_BRIDGE=false ENABLE_GEN_ACC=true`
+- `L1_BRIDGE_HUB_CONTRACT` / `L1_REGISTER_BRIDGE_PRIVATE_KEY` 仅在 `ENABLE_BRIDGE=true` 时必填
 
 ## 状态管理与续跑
 
@@ -305,6 +307,20 @@ make clean
 - `NODE_ID`
 - `GROUP_ID`
 - `ENABLE_GEN_ACC`
+
+### step2 L1 目标余额（CDK / OP / XJST 共用）
+
+三条流水线 step2 均通过 `fund_eth_up_to` 补足至目标余额（ether，非负整数；`0` 跳过该笔）：
+
+- `L1_FUND_VAULT_ETH`，默认 `5000`
+- `L1_FUND_CLAIM_SERVICE_ETH`，默认 `1000`
+- `L1_FUND_REGISTER_BRIDGE_ETH`，默认 `1000`
+
+`ydyl-deploy-client` 配置对应字段：`l1FundVaultEth` / `l1FundClaimServiceEth` / `l1FundRegisterBridgeEth`（省略则不写入远程命令，pipe 用默认）。
+
+### XJST 可选
+
+- `ENABLE_BRIDGE`，默认 `true`；`false` 跳过跨链相关 step（见上文 XJST 特有点）
 
 ### 开发时建议优先看的位置
 

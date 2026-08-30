@@ -10,8 +10,8 @@ set -Eueo pipefail
 #    - L1_RPC_URL_WS: 连接 L1 的 WS RPC 地址（用于 xjst 节点部署时透传给脚本）
 #    - L1_VAULT_PRIVATE_KEY:
 #        L1 主资金账户私钥（用于给部署相关账户转 L1 ETH；xjst 中也会直接作为 KURTOSIS_L1_VAULT_PRIVATE_KEY 使用）
-#    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用）
-#    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（调用 bridgeHub.addBridgeService）
+#    - L1_BRIDGE_HUB_CONTRACT: L1 bridgeHub/中继合约地址（注册 bridge 时使用；ENABLE_BRIDGE=true 时必填）
+#    - L1_REGISTER_BRIDGE_PRIVATE_KEY: 在 L1 上注册 bridge 的私钥（ENABLE_BRIDGE=true 时必填）
 #    - CHAIN_NODE_IPS: xjst 节点 IP 列表（格式如 [ip1,ip2,ip3,ip4]）
 #    - NODE_ID: 当前节点标识（如 node-1 / node-2 / node-3 / node-4）
 #    - GROUP_ID: xjst group id
@@ -22,6 +22,9 @@ set -Eueo pipefail
 #    - YDYL_SCRIPTS_LIB_DIR: 脚本库路径（默认 $DIR/ydyl-scripts-lib）
 #    - DRYRUN: true 时只打印不转账/不执行链上操作（由 step 函数读取）
 #    - BRIDGE_GAS_PRICE: 透传给 xjst-work/client/deploy_node.sh 的桥交易 gas price
+#    - ENABLE_BRIDGE: true/false（默认 true）；false 时跳过 step2 L1 跨链打款、Counter/bridge 注册及 metadata
+#    - L1_FUND_VAULT_ETH / L1_FUND_CLAIM_SERVICE_ETH / L1_FUND_REGISTER_BRIDGE_ETH:
+#        step2 三笔 L1 目标余额（ether，非负整数；默认 5000/1000/1000；0 跳过该笔）。见 ydyl-scripts-lib step2。
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
 #    - L2_CHAIN_ID: 在 main() 中固定为 0，无需手动传入
@@ -214,8 +217,6 @@ require_inputs() {
 		L1_RPC_URL
 		L1_RPC_URL_WS
 		L1_VAULT_PRIVATE_KEY
-		L1_BRIDGE_HUB_CONTRACT
-		L1_REGISTER_BRIDGE_PRIVATE_KEY
 		CHAIN_NODE_IPS
 		NODE_ID
 		GROUP_ID
@@ -226,6 +227,21 @@ require_inputs() {
 	for v in "${required_vars[@]}"; do
 		require_var "$v" || return 1
 	done
+
+	ENABLE_BRIDGE="${ENABLE_BRIDGE:-true}"
+	case "$ENABLE_BRIDGE" in
+	true | false) ;;
+	*)
+		echo "错误: ENABLE_BRIDGE 必须为 true 或 false，当前为 '${ENABLE_BRIDGE}'" >&2
+		return 1
+		;;
+	esac
+	export ENABLE_BRIDGE
+
+	if [[ "$ENABLE_BRIDGE" == "true" ]]; then
+		require_var L1_BRIDGE_HUB_CONTRACT || return 1
+		require_var L1_REGISTER_BRIDGE_PRIVATE_KEY || return 1
+	fi
 	# 注意：XJST 里 KURTOSIS_L1_VAULT_PRIVATE_KEY 直接复用 L1_VAULT_PRIVATE_KEY（见 gen_xjst_deploy_accounts），
 	# 用户无需单独设置；与 OP 流水线不同，这里不做随机生成。
 }
@@ -397,6 +413,17 @@ step7_deploy_counter_and_register_bridge_if_node1() {
 	fi
 }
 
+run_bridge_step() {
+	local step="$1"
+	local name="$2"
+	shift 2
+	if [[ "${ENABLE_BRIDGE:-true}" != "false" ]]; then
+		run_step "$step" "$name" "$@"
+	else
+		run_step "$step" "跳过（ENABLE_BRIDGE=false）: $name" skip_step
+	fi
+}
+
 run_all_steps() {
 	if [[ "${NODE_ID}" != "node-1" ]]; then
 		echo "🔹 当前是 ${NODE_ID}，跳过初始化身份和密钥，直接部署 xjst 节点"
@@ -409,7 +436,7 @@ run_all_steps() {
 	run_step 1 "初始化身份和密钥" step1_init_identities
 	gen_xjst_deploy_accounts
 	# reset_l2_private_key
-	run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
+	run_bridge_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
 	run_step 3 "启动 ydyl-console-service 服务" step11_start_ydyl_console_service
 	run_step 4 "部署 l1 合约" step3_deploy_l1_contracts
 	run_step 5 "部署 xjst 节点" step5_deploy_xjst_node
@@ -418,10 +445,10 @@ run_all_steps() {
 	# 等待其它节点启动完成后，再执行后续步骤
 	run_step 7 "等待其它节点启动完成后，再执行后续步骤" step_wait_for_other_nodes_to_start
 
-	run_step 8 "生成 counter-bridge-register .env 文件" step6_gen_counter_bridge_register_env
-	run_step 9 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
+	run_bridge_step 8 "生成 counter-bridge-register .env 文件" step6_gen_counter_bridge_register_env
+	run_bridge_step 9 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge_if_node1
 	run_step 10 "运行 ydyl-gen-accounts 脚本生成账户" step9_gen_accounts
-	run_step 11 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
+	run_bridge_step 11 "收集元数据、保存到文件，供外部查询" step10_collect_metadata
 	run_step 12 "检查 PM2 进程是否有失败" step12_check_pm2_unerror
 	echo "🔹 所有步骤完成"
 }
