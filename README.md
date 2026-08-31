@@ -574,10 +574,11 @@ fullnode 被重置后，至少要重新确认以下几件事：
 
 `setup-cfxnode.sh` 当前实际会做这些事：
 
-1. 用 `cast` 部署 deterministic contract 所需的前置交易
-2. 进入 `zk-claim-service/`，执行 `ignition/modules/4_deployzkBR.js` 部署 bridge 合约
-3. SSH 到远端机器，清理并重启 `jsonrpc-proxy-op`
-4. 给若干固定账户重新注资
+1. SSH 到 Confura，清理并重启 `jsonrpc-proxy-op`
+2. 运行 `cfxnode-work/jsscripts` 的 `npm run cross`
+3. 用 `cast` 部署 deterministic contract 所需的前置交易
+4. 进入 `zk-claim-service/`，执行 `ignition/modules/4_deployzkBR.js` 部署 bridge 合约
+5. 给若干固定账户重新注资
 
 运行前请确认：
 
@@ -590,6 +591,9 @@ fullnode 被重置后，至少要重新确认以下几件事：
 
 ```bash
 bash setup-cfxnode.sh
+ONLY_UPDATE_CONFURA_IP=true bash setup-cfxnode.sh
 ```
+
+`ONLY_UPDATE_CONFURA_IP=true` 只执行第 1 步（重启 `jsonrpc-proxy-op`），不需要 `L1_RPC_URL` / `L1_VAULT_PRIVATE_KEY`。
 
 这个脚本偏运维应急用途，不是通用化流水线。执行前建议先完整审阅脚本内容。

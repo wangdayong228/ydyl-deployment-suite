@@ -10,27 +10,35 @@ set -x
 #		- 1.2.1 `cast send --legacy --rpc-url $L1_RPC_URL --private-key $L1_VAULT_PRIVATE_KEY --value 100ether 0xef431755Bb97ed53874E3e27cAD2cD3399558e25`
 #		- 1.2.2 `PRIVATE_KEY=0xa3d9e98f0ba98960bf3755b7519d18b2250b0b8be5e38d5483dcfa3875df2d6f npx hardhat ignition deploy ignition/modules/4_deployzkBR.js --network espacedev`
 #	-1.3 启动 jsonrpc-proxy-op `ssh root@47.83.135.176 'zsh -ic "cd ~/workspace/jsonrpc-proxy && (npm run clear || true) && (pm2 delete jsonrpc-proxy-op || true) && npm run start:op"'`
+#  - ONLY_UPDATE_CONFURA_IP=true 时仅执行第 1 步（重启 confura 上 jsonrpc-proxy-op）
 ########################################
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFURA_IP="52.12.7.189"
 
-echo "🚀 [1/5] Run cross script..."
+# 必须是 confura 所在机器，因为 .env_op 默认配置 JSONRPC_URL=http://127.0.0.1:28545
+echo "🛰️ [1/5] Start jsonrpc-proxy-op..."
+ssh ubuntu@${CONFURA_IP} 'zsh -ic "cd ~/workspace/ydyl-deployment-suite/jsonrpc-proxy && (npm run clear || true) && (pm2 delete jsonrpc-proxy-op || true) && npm run start:op"'
+echo "✅ [1/5] Start jsonrpc-proxy-op done"
+
+if [[ "${ONLY_UPDATE_CONFURA_IP:-}" == "true" ]]; then
+  echo "ONLY_UPDATE_CONFURA_IP=true, skip remaining steps"
+  exit 0
+fi
+
+echo "🚀 [2/5] Run cross script..."
 (cd "${DIR}/cfxnode-work/jsscripts" && npm run cross)
-echo "✅ [1/5] Run cross script done"
+echo "✅ [2/5] Run cross script done"
 
-echo "🚀 [2/5] Deploy deterministic contract..."
+echo "🚀 [3/5] Deploy deterministic contract..."
 cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 100ether 0x3fab184622dc19b6109349b94811493bf2a45362
 cast rpc eth_sendRawTransaction 0xf8a58085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222 --rpc-url "${L1_RPC_URL}" || true
-echo "✅ [2/5] Deploy deterministic contract done"
+echo "✅ [3/5] Deploy deterministic contract done"
 
-echo "🌉 [3/5] Deploy bridge contract..."
+echo "🌉 [4/5] Deploy bridge contract..."
 cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 100ether 0xef431755Bb97ed53874E3e27cAD2cD3399558e25
 cd "${DIR}/zk-claim-service" && yarn && PRIVATE_KEY=0xa3d9e98f0ba98960bf3755b7519d18b2250b0b8be5e38d5483dcfa3875df2d6f npx hardhat ignition deploy ignition/modules/4_deployzkBR.js --network espacedev --reset
-echo "✅ [3/5] Deploy bridge contract done"
-
-echo "🛰️ [4/5] Start jsonrpc-proxy-op..."
-ssh ubuntu@35.161.153.151 'zsh -ic "cd ~/workspace/ydyl-deployment-suite/jsonrpc-proxy && (npm run clear || true) && (pm2 delete jsonrpc-proxy-op || true) && npm run start:op"'
-echo "✅ [4/5] Start jsonrpc-proxy-op done"
+echo "✅ [4/5] Deploy bridge contract done"
 
 echo "🔄 [5/5] Fund zh and xjst accounts..."
 cast send --legacy --rpc-url "${L1_RPC_URL}" --private-key "${L1_VAULT_PRIVATE_KEY}" --value 10000000ether 0x0f9B62bA159D889A9413Fd0DD742C409a9841793 # xr
