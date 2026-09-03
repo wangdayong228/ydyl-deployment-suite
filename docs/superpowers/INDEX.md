@@ -22,6 +22,7 @@
 | 2026-08-28 | [流水线 step2 L1 余额差额补足](specs/2026-08-28-l1-fund-top-up-spec.md) | — | `ydyl-scripts-lib/utils.sh`、`ydyl-scripts-lib/pipeline_steps_lib.sh` | 大勇 |
 | 2026-08-30 | [XJST ENABLE_BRIDGE + step2 L1 金额可配置](specs/2026-08-30-xjst-enable-bridge-spec.md) | — | `xjst_pipe.sh`、`ydyl-scripts-lib/*`、`ydyl-deploy-client/internal/deploy/*` | 大勇 |
 | 2026-08-31 | [Deploy 前预检（check）](specs/2026-08-31-deploy-precheck-spec.md) | — | `ydyl-deploy-client/internal/precheck`、`ydyl-deploy-client/cmd/check.go`、`ydyl-deploy-client/cmd/deploy.go` | 大勇 |
+| 2026-09-03 | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | — | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/2_genAccsByEoa.ts` 及必要共享模块 | 大勇 |
 
 ## Plans
 
