@@ -52,7 +52,7 @@
 - 产出：`deployCoreBatchSender(context, privateKey, artifact, startAddressIndex, totalCount): Promise<string>`
 - 复用：`CoreSpaceContext`、`createCoreBatchSenderReader`、20% gas/storage 余量算法
 
-- [ ] **步骤 1：先写成功交易字段和地址规范化测试**
+- [x] **步骤 1：先写成功交易字段和地址规范化测试**
 
 在 `test/coreSpaceClient.test.ts` 中导入新接口，并增加一个可观测构造参数、估算参数、发送参数和读回值的 fake Core context：
 
@@ -147,7 +147,7 @@ it('把 CIP-37 和 0x Core 合约地址统一成小写 0x', () => {
 });
 ```
 
-- [ ] **步骤 2：先写不可恢复失败和读回校验测试**
+- [x] **步骤 2：先写不可恢复失败和读回校验测试**
 
 继续在同一 `describe` 中增加失败矩阵；每个分支都必须在返回地址前失败：
 
@@ -202,7 +202,7 @@ it('部署后构造参数读回不一致时拒绝返回地址', async () => {
 });
 ```
 
-- [ ] **步骤 3：运行测试并确认红灯原因正确**
+- [x] **步骤 3：运行测试并确认红灯原因正确**
 
 运行：
 
@@ -214,7 +214,7 @@ env PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff
 
 预期：FAIL，错误明确指出 `deployCoreBatchSender` 或 `normalizeCoreContractAddress` 尚未导出；不得因测试语法或 Hardhat 配置失败。
 
-- [ ] **步骤 4：实现地址、artifact 和部署交易校验**
+- [x] **步骤 4：实现地址、artifact 和部署交易校验**
 
 在 `scripts/coreSpaceClient.ts` 中复用现有 `toBigInt`、`toSafeNumber`、`addEstimateMargin`，加入以下接口。实现必须在创建交易前验证 artifact 和构造参数：
 
@@ -295,13 +295,13 @@ export async function deployCoreBatchSender(
 }
 ```
 
-- [ ] **步骤 5：运行 Core 适配测试并确认绿灯**
+- [x] **步骤 5：运行 Core 适配测试并确认绿灯**
 
 运行步骤 3 的同一命令。
 
 预期：`Core Space 基础适配` 下原有 7 项和新增部署测试全部 PASS；发送参数中的 `chainId` 为 `1029`，不是 fake context 的 `networkId=1`。
 
-- [ ] **步骤 6：提交 Core 部署原语**
+- [x] **步骤 6：提交 Core 部署原语**
 
 ```bash
 cd ydyl-gen-accounts
@@ -327,7 +327,7 @@ git commit -m "feat(gen-accounts): add Core BatchSender deployment"
 - 产出：`runDeploy(args, dependencies?): Promise<string>`
 - 保留：不传 `--l2type 3` 时动态加载 Hardhat 并调用原有 ethers 部署路径
 
-- [ ] **步骤 1：先写 CLI 参数和分派失败测试**
+- [x] **步骤 1：先写 CLI 参数和分派失败测试**
 
 新建 `test/deployBatchSenderCore.test.ts`：
 
@@ -406,7 +406,7 @@ describe('Core BatchSender 部署 CLI', () => {
 });
 ```
 
-- [ ] **步骤 2：运行 CLI 测试并确认红灯原因正确**
+- [x] **步骤 2：运行 CLI 测试并确认红灯原因正确**
 
 ```bash
 cd ydyl-gen-accounts
@@ -416,7 +416,7 @@ env PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff
 
 预期：FAIL，错误指出 `runDeploy`、`validateDeployArgs` 或 `DeployArgs` 尚未导出；不得因为导入脚本而自动开始部署。
 
-- [ ] **步骤 3：把共享 helper 的 `l2type=3` 分支接到 Core 适配层**
+- [x] **步骤 3：把共享 helper 的 `l2type=3` 分支接到 Core 适配层**
 
 在 `scripts/batchSenderClient.ts` 导入 `connectCoreSpace`、`deployCoreBatchSender` 和 `CoreContractArtifact`，把现有拒绝分支替换为：
 
@@ -430,7 +430,7 @@ if (l2type === 3) {
 
 不得修改后续 `l2type=2` 的 XJST 零 gas 分支或 `l2type=0/1` 的 ethers 分支。
 
-- [ ] **步骤 4：实现可测试的 CLI 校验和执行器分派**
+- [x] **步骤 4：实现可测试的 CLI 校验和执行器分派**
 
 重写 `scripts/1_deployBatchSender.ts` 的入口结构，顶层不得静态导入 `hardhat` 或 `hookHardhat`。加入 Yargs 参数解析和以下可测试接口：
 
@@ -525,7 +525,7 @@ if (require.main === module) {
 }
 ```
 
-- [ ] **步骤 5：运行 CLI 测试、Core 测试和类型检查**
+- [x] **步骤 5：运行 CLI 测试、Core 测试和类型检查**
 
 ```bash
 cd ydyl-gen-accounts
@@ -536,7 +536,7 @@ npm run typecheck
 
 预期：全部 PASS；导入 `1_deployBatchSender.ts` 不加载 Hardhat 配置、不访问 RPC、不发送交易。
 
-- [ ] **步骤 6：提交 helper 和 CLI**
+- [x] **步骤 6：提交 helper 和 CLI**
 
 ```bash
 cd ydyl-gen-accounts
@@ -560,7 +560,7 @@ git commit -m "feat(gen-accounts): expose Core BatchSender deploy CLI"
 - 消费：任务 1-2 的 Core 单合约部署 CLI
 - 产出：从编译、部署到 by-contract/by-eoa 的可执行测试网流程和完整验证记录
 
-- [ ] **步骤 1：更新 README 的 Core 部署说明**
+- [x] **步骤 1：更新 README 的 Core 部署说明**
 
 把原有“本脚本不负责在 Core Space 部署 `BatchSender`”改为单合约部署命令，并明确 `3_concurrency.ts` 仍不支持 Core：
 
@@ -587,7 +587,7 @@ npx ts-node scripts/1_deployBatchSender.ts \
 
 原有 by-contract 示例继续使用该命令输出的 `0x` 地址，不再要求用户在仓库外自行部署。
 
-- [ ] **步骤 2：运行完整自动化验证**
+- [x] **步骤 2：运行完整自动化验证**
 
 ```bash
 cd ydyl-gen-accounts
@@ -599,7 +599,7 @@ git diff --check
 
 预期：所有测试 PASS，TypeScript 无错误，Hardhat 编译成功，diff 无空白错误。不得使用真实资金私钥执行自动化测试。
 
-- [ ] **步骤 3：执行可选测试网小额 smoke test**
+- [x] **步骤 3：执行可选测试网小额 smoke test**
 
 只有环境明确提供已充值的 `CORE_RPC` 和 `PRIVATE_KEY` 时执行：
 
@@ -616,17 +616,19 @@ npx ts-node scripts/1_deployBatchSender.ts \
 
 预期：输出一个 `0x8` 开头的 20 字节合约地址；日志显示成功回执和读回的 `startAddressIndex=0`、`totalCount=10`。缺少已充值测试账户时明确记录“未执行外部 smoke test”，不得改用主网私钥或自行发送交易。
 
-- [ ] **步骤 4：检查范围和兼容性**
+执行记录：当前环境未同时提供 `CORE_RPC` 与已充值 `PRIVATE_KEY`，因此未执行外部 smoke test，未发送真实交易。
+
+- [x] **步骤 4：检查范围和兼容性**
 
 ```bash
 cd ydyl-gen-accounts
-git diff d4ae766..HEAD --name-only
+git diff e914cb6..HEAD --name-only
 git status --short
 ```
 
 预期：本阶段新增改动只涉及本计划文件结构列出的子模块文件；`scripts/3_concurrency.ts`、`scripts/5_contract_status.ts`、`scripts/6_fund.ts` 未修改。人工核对 `l2type=2` 部署仍引用 `../libs/js-conflux-sdk` 且保持零 gas 参数，默认 `1_deployBatchSender.ts` 仍部署 `100000, 200000`。
 
-- [ ] **步骤 5：提交子模块 README**
+- [x] **步骤 5：提交子模块 README**
 
 ```bash
 cd ydyl-gen-accounts
@@ -634,7 +636,7 @@ git add README.md
 git commit -m "docs(gen-accounts): document Core BatchSender deployment"
 ```
 
-- [ ] **步骤 6：执行完成前验证技能链**
+- [x] **步骤 6：执行完成前验证技能链**
 
 依次使用：
 
@@ -653,7 +655,7 @@ post-verification-check
 - README、CLI help、代码和测试对默认值、必填参数及 `0x` 输出描述一致；
 - 本计划所有完成项有命令证据，INDEX 状态更新为“已完成”。
 
-- [ ] **步骤 7：提交父仓库收尾**
+- [x] **步骤 7：提交父仓库收尾**
 
 在父仓库勾选本计划全部步骤并把 INDEX 中本计划状态更新为“已完成”，然后运行：
 
