@@ -30,6 +30,7 @@
 |------|------|-----------|------|
 | 2026-06-11 | [Kurtosis runtime 日志过滤实现计划](plans/2026-06-11-kurtosis-runtime-log-filter-plan.md) | [Kurtosis 运行期日志白名单与 DEBUG/TRACE 过滤](specs/2026-06-11-kurtosis-runtime-log-filter-spec.md) | 已完成 |
 | 2026-09-04 | [`ydyl-gen-accounts` Core Space 支持实施计划](plans/2026-09-04-gen-accounts-core-space-support-plan.md) | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | 已完成 |
+| 2026-09-04 | [`ydyl-gen-accounts` Core BatchSender 单合约部署实施计划](plans/2026-09-04-gen-accounts-core-space-batch-sender-deploy-plan.md) | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | 待执行 |
 
 ---
 
