@@ -60,7 +60,7 @@
 - `l2type=3` 不使用也不要求 `groupId`。
 - `batchSender`、付款账户和生成账户对外均保持 `0x` 十六进制地址。
 - `gasPrice` 对 Core Space 可选：显式提供时使用固定值，未提供时读取 RPC 建议值。
-- Core 部署通过 `npx ts-node scripts/1_deployBatchSender.ts --l2type 3 ...` 运行；必须提供非空 `--rpc` 和 `0x` 加 64 位十六进制的 `--privateKey`。
+- Core 部署通过 `npm run deploy -- --l2type 3 ...` 运行；必须提供非空 `--rpc` 和 `0x` 加 64 位十六进制的 `--privateKey`。
 - Core 部署接受 `--startAddressIndex`、`--totalCount` 和 `--artifact`；artifact 默认路径为 `artifacts/contracts/batchSender.sol/BatchSender.json`。
 - 部署参数默认保持现有 `startAddressIndex=100000`、`totalCount=200000`；`startAddressIndex` 必须为非负安全整数，`totalCount` 必须为正安全整数。
 - 不传 `--l2type 3` 时，`scripts/1_deployBatchSender.ts` 继续使用现有 Hardhat/ethers 部署路径，不改变 `npx hardhat run ... --network ...` 的行为。
