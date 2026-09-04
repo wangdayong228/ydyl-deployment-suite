@@ -8,9 +8,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "cross": "node cross.js"
+    "cross": "node cross.js",
+    "crossback": "node crossback.js"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "ethers": "^6.16.0",
     "js-conflux-sdk": "^2.5.1"
   }
