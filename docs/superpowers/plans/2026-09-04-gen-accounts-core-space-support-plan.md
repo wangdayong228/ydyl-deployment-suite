@@ -95,7 +95,7 @@ describe('Core Space 基础适配', () => {
     expect(isTxReceiptSuccess(2, { outcomeStatus: 0 })).to.equal(true);
   });
 
-  it('连接时开启 hex 参数并采用 RPC 网络信息', async () => {
+  it('连接时关闭 hex RPC 参数并采用 RPC 网络信息', async () => {
     let received: Record<string, unknown> | undefined;
     const fake = {
       networkId: 1,
@@ -106,7 +106,7 @@ describe('Core Space 基础适配', () => {
       return fake as never;
     });
 
-    expect(received).to.deep.include({ url: 'http://core.invalid', useHexAddressInParameter: true });
+    expect(received).to.deep.include({ url: 'http://core.invalid', useHexAddressInParameter: false });
     expect(context.networkId).to.equal(1);
     expect(context.chainId).to.equal(1029);
   });
@@ -170,7 +170,7 @@ export type CoreSpaceContext = CoreNetwork & {
 
 export type CoreSdkOptions = {
   url: string;
-  useHexAddressInParameter: true;
+  useHexAddressInParameter: false;
 };
 
 export type CoreSdkFactory = (
@@ -227,7 +227,7 @@ export async function connectCoreSpace(
   rpc: string,
   factory: CoreSdkFactory = async (options) => await Conflux.create(options),
 ): Promise<CoreSpaceContext> {
-  const cfx = await factory({ url: rpc, useHexAddressInParameter: true });
+  const cfx = await factory({ url: rpc, useHexAddressInParameter: false });
   const network = validateCoreStatus(await cfx.getStatus());
   if (Number(cfx.networkId) !== network.networkId) {
     throw new Error(`SDK networkId=${String(cfx.networkId)} 与 RPC networkId=${network.networkId} 不一致`);

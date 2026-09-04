@@ -71,7 +71,9 @@
 - `package.json` 增加官方 `js-conflux-sdk@^2.6.0` 依赖，`package-lock.json` 固定实际安装版本。
 - 新增共享 Core Space 适配模块，负责：
   - 创建官方 `Conflux` client；
-  - 启用十六进制地址 RPC 参数；
+  - JSON-RPC 地址字段（如 `from`/`to`/nonce 查询）使用官方 SDK 默认 `useHexAddressInParameter: false`，按 Core 标准线格式发送 CIP-37；
+  - CLI、日志、进度文件与合约 ABI 地址参数继续保持 `0x` 十六进制表达，不切换为 CIP-37；
+  - 不向 Core JSON-RPC 发送 hex 地址字段；标准 Core 节点会将这些字段按 CIP-37 base32 解析，发送 hex 会导致请求失败；
   - 从 `cfx_getStatus` 初始化 `networkId` 并取得 `chainId`；
   - 从私钥生成符合 Core 地址类型规则的账户，并转换成 `0x` 地址；
   - 统一 Core 回执、nonce、epoch、gas、存储抵押和交易存在性查询；
