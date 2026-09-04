@@ -56,7 +56,7 @@
 - 产出：`coreHexAddressFromPrivateKey(privateKey, networkId): string`
 - 修改：`createAccountFromIndex(groupId, chainId, index, l2type, networkId?)`
 
-- [ ] **步骤 1：先写 Core 网络和账户的失败测试**
+- [x] **步骤 1：先写 Core 网络和账户的失败测试**
 
 新建 `test/coreSpaceClient.test.ts`，先只加入以下测试；此时目标模块尚不存在：
 
@@ -113,7 +113,7 @@ describe('Core Space 基础适配', () => {
 });
 ```
 
-- [ ] **步骤 2：运行测试并确认红灯原因正确**
+- [x] **步骤 2：运行测试并确认红灯原因正确**
 
 运行：
 
@@ -124,7 +124,7 @@ npx hardhat test --no-compile test/coreSpaceClient.test.ts
 
 预期：FAIL，错误包含 `Cannot find module '../scripts/coreSpaceClient'`，证明测试确实依赖尚未实现的 Core 适配层。
 
-- [ ] **步骤 3：安装官方 SDK 并登记测试命令**
+- [x] **步骤 3：安装官方 SDK 并登记测试命令**
 
 运行：
 
@@ -146,7 +146,7 @@ npm install --save 'js-conflux-sdk@^2.6.0'
 "js-conflux-sdk": "^2.6.0"
 ```
 
-- [ ] **步骤 4：实现最小 Core 网络与地址基础**
+- [x] **步骤 4：实现最小 Core 网络与地址基础**
 
 新建 `scripts/coreSpaceClient.ts`，先写入网络、转换和公共类型。转换必须验证 Core 用户地址类型位为 `0x1`：
 
@@ -246,7 +246,7 @@ export function coreHexAddressFromPrivateKey(privateKey: string, networkId: numb
 }
 ```
 
-- [ ] **步骤 5：扩展确定性账户和回执判断**
+- [x] **步骤 5：扩展确定性账户和回执判断**
 
 在 `scripts/utils.ts` 引入 `coreHexAddressFromPrivateKey`，将现有两个函数改为：
 
@@ -287,7 +287,7 @@ export function createAccountFromIndex(
 }
 ```
 
-- [ ] **步骤 6：运行基础测试并确认绿灯**
+- [x] **步骤 6：运行基础测试并确认绿灯**
 
 运行：
 
@@ -299,7 +299,7 @@ npm run typecheck
 
 预期：四个基础测试 PASS，类型检查 PASS。
 
-- [ ] **步骤 7：提交基础能力**
+- [x] **步骤 7：提交基础能力**
 
 ```bash
 cd ydyl-gen-accounts
@@ -324,7 +324,7 @@ git commit -m "feat(gen-accounts): add Core Space client foundation"
 - 产出：`getBatchSenderReader(context, address, 3)`
 - 产出：`getBatchSenderWriter(context, address, 3)`
 
-- [ ] **步骤 1：先写 Core 合约参数的失败测试**
+- [x] **步骤 1：先写 Core 合约参数的失败测试**
 
 在 `test/coreSpaceClient.test.ts` 增加假 SDK 工厂和测试。测试必须验证估算余量以及发送参数里存在 `storageLimit`：
 
@@ -409,7 +409,7 @@ it('为 Core batchSendETH 准备并发送完整标准交易字段', async () => 
 });
 ```
 
-- [ ] **步骤 2：运行新增测试并确认红灯**
+- [x] **步骤 2：运行新增测试并确认红灯**
 
 运行：
 
@@ -420,7 +420,7 @@ npx hardhat test --no-compile test/coreSpaceClient.test.ts
 
 预期：FAIL，错误指出 `createCoreBatchSenderReader` / `createCoreBatchSenderWriter` 未导出或 `l2type=3` 尚未被统一客户端接受。
 
-- [ ] **步骤 3：在 Core 适配层实现合约 reader/writer**
+- [x] **步骤 3：在 Core 适配层实现合约 reader/writer**
 
 在 `scripts/coreSpaceClient.ts` 引入 `BatchSender__factory`，并加入：
 
@@ -521,7 +521,7 @@ export function createCoreBatchSenderWriter(
 }
 ```
 
-- [ ] **步骤 4：把 `l2type=3` 接入 `batchSenderClient.ts`**
+- [x] **步骤 4：把 `l2type=3` 接入 `batchSenderClient.ts`**
 
 扩展类型和连接对象：
 
@@ -569,7 +569,7 @@ if (l2type === 3) {
 }
 ```
 
-- [ ] **步骤 5：运行 Core 合约测试并确认绿灯**
+- [x] **步骤 5：运行 Core 合约测试并确认绿灯**
 
 运行：
 
@@ -581,7 +581,7 @@ npm run typecheck
 
 预期：六个测试全部 PASS，类型检查 PASS。
 
-- [ ] **步骤 6：提交 Core 合约适配**
+- [x] **步骤 6：提交 Core 合约适配**
 
 ```bash
 cd ydyl-gen-accounts
@@ -604,7 +604,7 @@ git commit -m "feat(gen-accounts): adapt BatchSender for Core Space"
 - 产出：`validateArgs`、`buildBatchAddresses` 可直接单测
 - 产出：`buildCoreRuntime(argv): Promise<RuntimeContext>`
 
-- [ ] **步骤 1：先写 by-contract 的失败测试**
+- [x] **步骤 1：先写 by-contract 的失败测试**
 
 新建 `test/genAccsCoreModes.test.ts`：
 
@@ -644,7 +644,7 @@ describe('gen accounts Core 模式', () => {
 });
 ```
 
-- [ ] **步骤 2：运行测试并确认红灯**
+- [x] **步骤 2：运行测试并确认红灯**
 
 运行：
 
@@ -655,7 +655,7 @@ npx hardhat test --no-compile test/genAccsCoreModes.test.ts
 
 预期：FAIL，原因是 `validateArgs` / `buildBatchAddresses` 尚未导出或 `l2type=3` 尚未接受；不得出现脚本自动执行 CLI 的副作用。
 
-- [ ] **步骤 3：扩展参数、运行时上下文和地址生成**
+- [x] **步骤 3：扩展参数、运行时上下文和地址生成**
 
 在 `2_genAccsByContract.ts`：
 
@@ -733,7 +733,7 @@ export function buildBatchAddresses(
 
 实现时保留 `validateArgs` 中 RPC、合约、私钥、数量、gas price 和 `groupId` 的全部现有校验，不得用注释替代。
 
-- [ ] **步骤 4：新增 `buildCoreRuntime` 并分流**
+- [x] **步骤 4：新增 `buildCoreRuntime` 并分流**
 
 新增：
 
@@ -779,7 +779,7 @@ async function initRuntime(argv: Args): Promise<RuntimeContext> {
 
 gas price 逻辑保持：只有 `l2type=2` 固定为零，Core 使用 `fixedGasPriceWei ?? windowBaseParams.gasPrice`。
 
-- [ ] **步骤 5：避免导入测试时自动运行 CLI**
+- [x] **步骤 5：避免导入测试时自动运行 CLI**
 
 将文件末尾改为：
 
@@ -800,7 +800,7 @@ if (argv.l2type === 3) {
 }
 ```
 
-- [ ] **步骤 6：运行 by-contract 测试并确认绿灯**
+- [x] **步骤 6：运行 by-contract 测试并确认绿灯**
 
 运行：
 
@@ -812,7 +812,7 @@ npm run typecheck
 
 预期：两个测试 PASS，类型检查 PASS，导入脚本时没有 CLI 日志或进程退出。
 
-- [ ] **步骤 7：提交 by-contract 适配**
+- [x] **步骤 7：提交 by-contract 适配**
 
 ```bash
 cd ydyl-gen-accounts
@@ -838,7 +838,7 @@ git commit -m "feat(gen-accounts): support Core Space by contract"
 - 产出：`RunConfig.fromArgs` 对 `l2type=3` 使用 by-contract progress
 - 产出：`EoaRuntime` 的 Core 发送与回执等待分支
 
-- [ ] **步骤 1：先写标准 Core 自转账失败测试**
+- [x] **步骤 1：先写标准 Core 自转账失败测试**
 
 在 `test/coreSpaceClient.test.ts` 增加：
 
@@ -881,7 +881,7 @@ it('自转账签名包含官方 SDK 补齐的 storageLimit', async () => {
 });
 ```
 
-- [ ] **步骤 2：先写 EOA 配置失败测试**
+- [x] **步骤 2：先写 EOA 配置失败测试**
 
 在 `test/genAccsCoreModes.test.ts` 增加：
 
@@ -931,7 +931,7 @@ it('by-eoa 的 l2type=3 必须并会复用 by-contract progress', () => {
 });
 ```
 
-- [ ] **步骤 3：运行新增测试并确认红灯**
+- [x] **步骤 3：运行新增测试并确认红灯**
 
 运行：
 
@@ -942,7 +942,7 @@ npx hardhat test --no-compile test/coreSpaceClient.test.ts test/genAccsCoreModes
 
 预期：FAIL，原因分别是 `sendCoreSelfTransfer` 尚未导出，以及 EOA 脚本尚未接受 `l2type=3`。
 
-- [ ] **步骤 4：实现无钱包累积的 Core 自转账**
+- [x] **步骤 4：实现无钱包累积的 Core 自转账**
 
 在 `coreSpaceClient.ts` 增加；每个账户直接签名并发送 raw transaction，不加入长期存活的 SDK wallet：
 
@@ -967,7 +967,7 @@ export async function sendCoreSelfTransfer(
 }
 ```
 
-- [ ] **步骤 5：扩展 EOA 参数和配置语义**
+- [x] **步骤 5：扩展 EOA 参数和配置语义**
 
 在 `2_genAccsByEoa.ts`：
 
@@ -1012,7 +1012,7 @@ if (argv.l2type === 0 || argv.l2type === 1 || argv.l2type === 3) {
 
 参数校验接受 `0/1/2/3`，并要求 `0/1/3` 提供 `by-contract-progress`；帮助文本和注释同步写明 `3` 的语义。
 
-- [ ] **步骤 6：扩展 `EoaRuntime`**
+- [x] **步骤 6：扩展 `EoaRuntime`**
 
 给 `EoaRuntime` 增加 `core?: CoreSpaceContext`、`networkId: number`，并新增构建分支：
 
@@ -1056,7 +1056,7 @@ const { privateKey } = createAccountFromIndex(
 
 原来的 `if (runtime.chainId === 0 && idx === 0)` 改为 `if (cfg.l2type === 2 && idx === 0)`，避免 Core 私网被错误套用 XJST 特例。
 
-- [ ] **步骤 7：增加 main guard 并跑绿灯**
+- [x] **步骤 7：增加 main guard 并跑绿灯**
 
 将 `2_genAccsByEoa.ts` 末尾改为：
 
@@ -1079,7 +1079,7 @@ npm run typecheck
 
 预期：全部测试 PASS，类型检查 PASS。
 
-- [ ] **步骤 8：提交 EOA 适配**
+- [x] **步骤 8：提交 EOA 适配**
 
 ```bash
 cd ydyl-gen-accounts
@@ -1103,7 +1103,7 @@ git commit -m "feat(gen-accounts): support Core Space by EOA"
 - 消费：任务 1-4 的最终 CLI 行为
 - 产出：可执行的 Core 示例、完整验证记录、spec/plan/代码一致状态
 
-- [ ] **步骤 1：更新 README**
+- [x] **步骤 1：更新 README**
 
 在两个目标脚本章节明确加入：
 
@@ -1131,7 +1131,7 @@ ts-node scripts/2_genAccsByEoa.ts \
 
 同时声明 `3_concurrency.ts` 尚未支持 `l2type=3`，Core 模式本次直接运行两个目标脚本。
 
-- [ ] **步骤 2：运行完整自动化验证**
+- [x] **步骤 2：运行完整自动化验证**
 
 依次运行：
 
@@ -1145,7 +1145,7 @@ git diff --check
 
 预期：测试全部 PASS，TypeScript 无错误，Hardhat 编译成功，diff 无空白错误。
 
-- [ ] **步骤 3：检查范围和兼容性**
+- [x] **步骤 3：检查范围和兼容性**
 
 运行：
 
@@ -1157,7 +1157,7 @@ git status --short
 
 预期：只出现本计划文件结构表列出的子模块文件；`scripts/3_concurrency.ts`、`scripts/5_contract_status.ts`、`scripts/6_fund.ts` 未修改。人工核对 `l2type=2` 仍引用 `../libs/js-conflux-sdk` 且零 gas 分支未改变。
 
-- [ ] **步骤 4：提交子模块 README**
+- [x] **步骤 4：提交子模块 README**
 
 ```bash
 cd ydyl-gen-accounts
@@ -1165,7 +1165,7 @@ git add README.md
 git commit -m "docs(gen-accounts): document Core Space mode"
 ```
 
-- [ ] **步骤 5：执行完成前验证技能链**
+- [x] **步骤 5：执行完成前验证技能链**
 
 依次使用：
 
@@ -1183,7 +1183,7 @@ post-verification-check
 - `docs/superpowers/INDEX.md` 的计划状态更新为“已完成”；
 - spec、plan、README、实现和测试对 `l2type=3`、`0x` 地址、双 SDK 隔离的描述一致。
 
-- [ ] **步骤 6：提交父仓库收尾**
+- [x] **步骤 6：提交父仓库收尾**
 
 在父仓库更新本计划所有已完成复选框和 INDEX 状态，然后运行：
 
