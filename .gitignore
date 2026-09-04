@@ -9,5 +9,6 @@ doc-report
 node_modules
 .scratch
 .superpowers
+.worktrees/
 .vscode
 cursor_chat_history
