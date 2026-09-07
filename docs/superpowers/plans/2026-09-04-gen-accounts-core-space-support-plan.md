@@ -26,8 +26,9 @@
 
 | 文件 | 职责 |
 |------|------|
-| `ydyl-gen-accounts/scripts/coreSpaceClient.ts` | 官方 Core SDK 的网络发现、账户地址、合约 reader/writer、自转账和回执适配 |
-| `ydyl-gen-accounts/scripts/utils.ts` | 在现有确定性私钥规则上增加 Core 地址派生和 Core 回执成功判断 |
+| `ydyl-gen-accounts/scripts/coreSpaceAddress.ts` | Core hex 地址派生；只用官方 `js-conflux-sdk`，不引入 TypeChain 或 XJST 内嵌 SDK |
+| `ydyl-gen-accounts/scripts/coreSpaceClient.ts` | 官方 Core SDK 的网络发现、合约 reader/writer、自转账和回执适配；re-export 地址函数 |
+| `ydyl-gen-accounts/scripts/utils.ts` | 在现有确定性私钥规则上增加 Core 地址派生和 Core 回执成功判断；从 `coreSpaceAddress` 引入，避免 XJST `6_fund` 静态经过 TypeChain |
 | `ydyl-gen-accounts/scripts/batchSenderClient.ts` | 将 `l2type=3` 分派给 Core 适配层，保留统一 reader/writer 接口 |
 | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts` | 新增 Core by-contract 运行时并传递 `networkId` |
 | `ydyl-gen-accounts/scripts/2_genAccsByEoa.ts` | 新增 Core EOA 运行时并复用 by-contract 进度协调 |
@@ -251,7 +252,7 @@ export function coreHexAddressFromPrivateKey(privateKey: string, networkId: numb
 在 `scripts/utils.ts` 引入 `coreHexAddressFromPrivateKey`，将现有两个函数改为：
 
 ```ts
-import { coreHexAddressFromPrivateKey } from './coreSpaceClient';
+import { coreHexAddressFromPrivateKey } from './coreSpaceAddress';
 
 export function isTxReceiptSuccess(
   l2type: number,

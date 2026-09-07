@@ -28,6 +28,7 @@
 - 本次不修改 `scripts/3_concurrency.ts`、`scripts/5_contract_status.ts`、`scripts/6_fund.ts` 或流水线入口。
 - 本次不改变 XJST 的零 gas、`groupId` 私钥派生或定制交易编码。
 - 本次不迁移或删除 `libs/js-conflux-sdk`。
+- XJST `scripts/6_fund.ts` / `scripts/fund.ts` / `scripts/utils.ts` 的静态导入图不得经过 `typechain-types`。Core 地址派生（`coreHexAddressFromPrivateKey`）使用官方 `js-conflux-sdk`，不得与 TypeChain 或 XJST 内嵌 `libs/js-conflux-sdk` 放在同一模块。`l2type=2` 充值路径不要求先 `hardhat compile`。
 - 本次不支持以 CIP-37 地址作为 CLI 输入或进度文件输出。
 - 本次不把 Core Space 接入 `scripts/3_concurrency.ts` 的多合约部署、付款账户充值或 PM2 编排。
 
