@@ -437,6 +437,9 @@ cd ydyl-deploy-client
 go build -o ydyl-deploy-client .
 go run . deploy -f config.deploy.yaml
 go run . gen-cross-tx-config --servers ./output/servers.json --config ./config.deploy.yaml
+go run . gen-accounts start
+go run . gen-accounts stop
+go run . gen-accounts resume
 ```
 
 主要子命令（完整列表见 `ydyl-deploy-client --help`）：
@@ -452,7 +455,7 @@ go run . gen-cross-tx-config --servers ./output/servers.json --config ./config.d
 - `waitssh`：等待指定主机 SSH 就绪
 - `sync`：向远端主机同步文件 / 脚本
 - `shutdown`：批量停机 / 终止实例
-- `monitor-gen-accounts`：远端观察 `ydyl-gen-accounts` 进度
+- `gen-accounts start|stop|resume`：按 `servers.json` 对 OP/CDK 全部节点和 XJST 组内 node-1 并发 SSH 执行 `npm run start|stop|resume`（默认 `--servers ./output/servers.json`）
 - `bench-cross-tx`：批量触发跨链压测
 - `tps`：拉取并汇总各节点 TPS
 - `setup-cfxnode`：远端执行 `setup-cfxnode.sh` 的对应逻辑
@@ -478,7 +481,7 @@ cd ydyl-gen-accounts
 npm i
 npm run build
 npm run start -- --fundAmount 1000 --processes 1 --capacity 20000000
-npm run stop   # 停止创建账户（保留进度与 contracts.json；彻底清理用 npm run clean）
+npm run stop   # 停止创建账户（进程仍在 PM2 列表，可 npm run resume 恢复；彻底清理用 npm run clean）
 ```
 
 ### `ydyl-bench-docker`

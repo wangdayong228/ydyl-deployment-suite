@@ -23,6 +23,7 @@
 | 2026-08-30 | [XJST ENABLE_BRIDGE + step2 L1 金额可配置](specs/2026-08-30-xjst-enable-bridge-spec.md) | — | `xjst_pipe.sh`、`ydyl-scripts-lib/*`、`ydyl-deploy-client/internal/deploy/*` | 大勇 |
 | 2026-08-31 | [Deploy 前预检（check）](specs/2026-08-31-deploy-precheck-spec.md) | — | `ydyl-deploy-client/internal/precheck`、`ydyl-deploy-client/cmd/check.go`、`ydyl-deploy-client/cmd/deploy.go` | 大勇 |
 | 2026-09-03 | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | — | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/2_genAccsByEoa.ts` 及必要共享模块 | 大勇 |
+| 2026-09-07 | [deploy-client 远端 gen-accounts 命令](specs/2026-09-07-deploy-client-gen-accounts-remote-commands-spec.md) | — | `ydyl-deploy-client/cmd/gen_accounts.go`、`ydyl-deploy-client/internal/genaccounts` | 大勇 |
 
 ## Plans
 
@@ -41,3 +42,4 @@
 - 2026-06-11 `USE_REAL_PROVER` spec 依赖 2026-05-14 kurtosis-cdk 真实 prover 能力；在 `cdk-work` 层用环境变量统一注入
 - 2026-06-11 Kurtosis 日志过滤 spec 扩展 2026-06-10 日志 spec §3.1：CDK/OP runtime 白名单 + DEBUG/TRACE 过滤
 - 2026-06-12 `FAULT_GAME_MAX_CLOCK_DURATION` spec 依赖 2026-05-06 rollup spec 的 dispute 秒级压缩背景；模式对齐 2026-06-11 CDK `USE_REAL_PROVER` spec（envsubst + 流水线持久化）；实现需同步改 `optimism-package` 并更新 `OP_PACKAGE_LOCATOR` commit
+- 2026-09-07 远端 gen-accounts 命令复用 2026-05-07 / `gen-cross-tx-config` 的 XJST node-1 选机规则（`PickChainEntries`），不改变流水线 step9
