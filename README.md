@@ -138,7 +138,7 @@ make clean
 2. 从 `L1_VAULT_PRIVATE_KEY` 转账 L1 ETH
 3. 启动 `jsonrpc-proxy`
 4. 部署 Kurtosis CDK
-5. 给 `L2_PRIVATE_KEY` 和 `CLAIM_SERVICE_PRIVATE_KEY` 充值 L2 ETH
+5. 给 `L2_PRIVATE_KEY`、`CLAIM_SERVICE_PRIVATE_KEY` 和固定地址 `0x311C290704B850d2be9aC5F486fD7073B7ce4Ad9` 充值 L2 ETH
 6. 生成 `zk-claim-service` 所需 `.env`
 7. 部署 Counter 并注册 bridge
 8. 启动 `zk-claim-service`
@@ -163,7 +163,7 @@ CDK 特有点：
 2. 从 `L1_VAULT_PRIVATE_KEY` 转账 L1 ETH
 3. 启动 `jsonrpc-proxy`
 4. 部署 Kurtosis OP
-5. 给 `L2_PRIVATE_KEY` 和 `CLAIM_SERVICE_PRIVATE_KEY` 充值 L2 ETH
+5. 给 `L2_PRIVATE_KEY`、`CLAIM_SERVICE_PRIVATE_KEY` 和固定地址 `0x311C290704B850d2be9aC5F486fD7073B7ce4Ad9` 充值 L2 ETH
 6. 生成 `op-claim-service` / `counter-bridge-register` 所需 `.env`
 7. 部署 Counter 并注册 bridge
 8. 启动 `op-claim-service`

@@ -31,6 +31,7 @@ set -Eueo pipefail
 #    - L2_ADDRESS: 由 L2_PRIVATE_KEY 推导（用于 step5 接收 L2 充值）
 #    - L1_RPC_URL_PROXY: step3 启动 jsonrpc-proxy 后生成（用于 kurtosis deploy）
 #    - L2_VAULT_PRIVATE_KEY: step4 从 op deploy 产物 wallets.json 解析（用于 step5 给 L2 账户充值）
+#    - step5 还会给固定地址 0x311C290704B850d2be9aC5F486fD7073B7ce4Ad9 转 1000 L2 ETH
 # 4. 步骤控制：
 #    - 默认：从上次完成步骤的下一步开始执行（读取 output/op_pipe.state）
 #    - 指定起始步骤：
@@ -285,7 +286,7 @@ run_all_steps() {
     run_step 2 "从 L1_VAULT_PRIVATE_KEY 转账 L1 ETH" step2_fund_l1_accounts
     run_step 3 "启动 jsonrpc-proxy（L1/L2 RPC 代理）" step3_start_jsonrpc_proxy
     run_step 4 "部署 kurtosis op" step4_deploy_kurtosis_op
-    run_step 5 "给 L2_PRIVATE_KEY 和 CLAIM_SERVICE_PRIVATE_KEY 转账 L2 ETH" step5_fund_l2_accounts
+    run_step 5 "给 L2_PRIVATE_KEY、CLAIM_SERVICE_PRIVATE_KEY 和固定地址转账 L2 ETH" step5_fund_l2_accounts
     run_step 6 "生成 OP 相关 env 并拷贝到服务目录" step6_gen_op_claim_env
     run_step 7 "部署 counter 合约并注册 bridge 到 L1 中继合约" step7_deploy_counter_and_register_bridge
     run_step 8 "启动 op-claim-service 服务" step8_start_op_claim_service
