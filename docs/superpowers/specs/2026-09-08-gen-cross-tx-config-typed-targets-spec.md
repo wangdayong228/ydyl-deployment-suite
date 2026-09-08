@@ -6,7 +6,7 @@
 
 压测桥接约束：XJST 跨链目标必须是 XJST；OP/CDK 只能打 OP 或 CDK。全体链 derangement 会生成 `op → xjst` 这类非法边。单实例池（例如只有 1 条 xjst）必须允许自指，否则无法生成 job。
 
-`--wallet-amount` 默认 100 过大，默认改为 10。
+`--wallet-amount` 默认 **100**；`--tx-amount-per-wallet` 默认 **10000**。
 
 ## 目标
 
@@ -18,7 +18,8 @@
   - `n == 0`：跳过
   - `n == 1`：自环（`assignment[k] = k`）
   - `n >= 2`：Fisher–Yates + 环移 1（池内源 ≠ 目标，池内每个实例作 target 恰好一次）
-- `--wallet-amount` CLI 默认值为 **10**
+- `--wallet-amount` CLI 默认值为 **100**
+- `--tx-amount-per-wallet` CLI 默认值为 **10000**
 - 不新增 CLI 参数
 - `GenerateWithFetcher` 最少 **1** 条参与链（单链自指合法）
 
@@ -57,7 +58,7 @@
 
 ## CLI
 
-`--wallet-amount` 默认 `10`。显式传参行为不变。
+`--wallet-amount` 默认 `100`，`--tx-amount-per-wallet` 默认 `10000`。显式传参行为不变。
 
 `gen-cross-tx-config` 的 `Long` 说明：xjst 只打 xjst，op/cdk 只打 op/cdk，单实例可自指。
 
@@ -67,7 +68,7 @@
 |------|------|
 | `ydyl-deploy-client/internal/crosstxconfig/crosstxconfig.go` | `assignTargetsByType`；`assignUniqueTargets` 支持 n=0/1；最少 1 条链 |
 | `ydyl-deploy-client/internal/crosstxconfig/crosstxconfig_test.go` | 分池、自指、池内 uniqueness |
-| `ydyl-deploy-client/cmd/gen_cross_tx_config.go` | `--wallet-amount` 默认 10；更新 `Long` |
+| `ydyl-deploy-client/cmd/gen_cross_tx_config.go` | `--wallet-amount` 默认 100；`--tx-amount-per-wallet` 默认 10000；更新 `Long` |
 
 ## 用法
 

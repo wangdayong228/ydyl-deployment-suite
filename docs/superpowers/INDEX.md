@@ -49,6 +49,6 @@
 - 2026-06-12 `FAULT_GAME_MAX_CLOCK_DURATION` spec 依赖 2026-05-06 rollup spec 的 dispute 秒级压缩背景；模式对齐 2026-06-11 CDK `USE_REAL_PROVER` spec（envsubst + 流水线持久化）；实现需同步改 `optimism-package` 并更新 `OP_PACKAGE_LOCATOR` commit
 - 2026-09-07 远端 gen-accounts 命令复用 2026-05-07 / `gen-cross-tx-config` 的 XJST node-1 选机规则（`PickChainEntries`），不改变流水线 step9
 - 2026-09-07 `gen-cross-tx-config` unique-targets 只改 `GenerateJobs` 的目标分配，不改 `PickChainEntries`，不影响远端 gen-accounts 选机
-- 2026-09-08 typed-targets 覆盖 unique-targets 的配对范围：xjst 只打 xjst，op/cdk 只打 op/cdk；n=1 允许自指；池内 n≥2 仍 derangement；`--wallet-amount` 默认 10
+- 2026-09-08 typed-targets 覆盖 unique-targets 的配对范围：xjst 只打 xjst，op/cdk 只打 op/cdk；n=1 允许自指；池内 n≥2 仍 derangement；`--wallet-amount` 默认 100，`--tx-amount-per-wallet` 默认 10000
 - 2026-09-08 bench receipt-wait 覆盖 unique-targets / typed-targets 中「xjst 源 `WaitForReceipts=false`」：所有源链默认 `wait_for_receipts=true`，未打包上限 `max_unconfirmed`（默认 1000）由 CLI 写入 job 字段；跨 round 累计，满 N 才查 receipt 补发额度
 - 2026-09-08 `sample-wallets` 复用 `PickChainEntries`（不改选机规则）与确定性私钥公式；不改 `gen-private-key`
