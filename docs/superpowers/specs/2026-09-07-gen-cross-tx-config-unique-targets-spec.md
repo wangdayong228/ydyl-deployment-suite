@@ -1,5 +1,7 @@
 # gen-cross-tx-config target 不可重复
 
+> **部分覆盖：** 「op/cdk/xjst 可互跨」「禁止 XJST 自指」「全体链 derangement / 至少 2 条链」已被 [2026-09-08 typed-targets spec](2026-09-08-gen-cross-tx-config-typed-targets-spec.md) 取代。池内 uniqueness（n≥2 时源 ≠ 目标、每个实例作 target 恰好一次）仍有效。
+
 ## 背景
 
 `ydyl-deploy-client gen-cross-tx-config` 为每条参与链生成 1 条跨链 job。旧实现里每个源链独立随机选目标，多条源链可以打到同一条目标链；XJST 源链还被硬编码为指向自身，进一步放大重复。

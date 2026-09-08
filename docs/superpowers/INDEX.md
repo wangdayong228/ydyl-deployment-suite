@@ -25,6 +25,7 @@
 | 2026-09-03 | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | — | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/2_genAccsByEoa.ts` 及必要共享模块 | 大勇 |
 | 2026-09-07 | [deploy-client 远端 gen-accounts 命令](specs/2026-09-07-deploy-client-gen-accounts-remote-commands-spec.md) | — | `ydyl-deploy-client/cmd/gen_accounts.go`、`ydyl-deploy-client/internal/genaccounts` | 大勇 |
 | 2026-09-07 | [gen-cross-tx-config target 不可重复](specs/2026-09-07-gen-cross-tx-config-unique-targets-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go` | 大勇 |
+| 2026-09-08 | [gen-cross-tx-config 分池目标与 wallet_amount 默认值](specs/2026-09-08-gen-cross-tx-config-typed-targets-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go` | 大勇 |
 
 ## Plans
 
@@ -44,4 +45,5 @@
 - 2026-06-11 Kurtosis 日志过滤 spec 扩展 2026-06-10 日志 spec §3.1：CDK/OP runtime 白名单 + DEBUG/TRACE 过滤
 - 2026-06-12 `FAULT_GAME_MAX_CLOCK_DURATION` spec 依赖 2026-05-06 rollup spec 的 dispute 秒级压缩背景；模式对齐 2026-06-11 CDK `USE_REAL_PROVER` spec（envsubst + 流水线持久化）；实现需同步改 `optimism-package` 并更新 `OP_PACKAGE_LOCATOR` commit
 - 2026-09-07 远端 gen-accounts 命令复用 2026-05-07 / `gen-cross-tx-config` 的 XJST node-1 选机规则（`PickChainEntries`），不改变流水线 step9
-- 2026-09-07 `gen-cross-tx-config` unique-targets 只改 `GenerateJobs` 的目标分配（全体链实例 derangement），不改 `PickChainEntries`，不影响远端 gen-accounts 选机
+- 2026-09-07 `gen-cross-tx-config` unique-targets 只改 `GenerateJobs` 的目标分配，不改 `PickChainEntries`，不影响远端 gen-accounts 选机
+- 2026-09-08 typed-targets 覆盖 unique-targets 的配对范围：xjst 只打 xjst，op/cdk 只打 op/cdk；n=1 允许自指；池内 n≥2 仍 derangement；`--wallet-amount` 默认 10
