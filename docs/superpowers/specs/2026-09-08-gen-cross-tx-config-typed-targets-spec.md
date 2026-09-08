@@ -26,7 +26,7 @@
 
 - 不改 `PickChainEntries`
 - 不改 job 字段映射（除目标链选择与 CLI 默认值外）
-- 不把 `WaitForReceipts` 改成按目标链类型：仍按源链类型（xjst 源为 false）
+- `WaitForReceipts` 已改由 [2026-09-08 receipt-wait spec](2026-09-08-bench-cross-tx-receipt-wait-spec.md) 定义（所有源链默认 true），不再按源链类型写死
 - 不改写已生成的 `output/jobs/*.json`（重新跑命令后才会覆盖）
 - 不改写 `2026-05-07` 报告提纲里的「笛卡尔积 100×99」措辞
 
@@ -51,7 +51,7 @@
 
 ## 保持不变的映射
 
-- `WaitForReceipts`：`source.Type != "xjst"`
+- `WaitForReceipts`：见 [2026-09-08 receipt-wait spec](2026-09-08-bench-cross-tx-receipt-wait-spec.md)（默认 true，含 xjst）
 - `target.Type == "xjst"` 时 `TargetL1Bridge` 使用 `L1BridgeSendContract`，否则 `L1BridgeReceiveContract`
 - 全部 job 共用一次生成的 12-word mnemonic
 

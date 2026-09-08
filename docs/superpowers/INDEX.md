@@ -26,6 +26,7 @@
 | 2026-09-07 | [deploy-client 远端 gen-accounts 命令](specs/2026-09-07-deploy-client-gen-accounts-remote-commands-spec.md) | — | `ydyl-deploy-client/cmd/gen_accounts.go`、`ydyl-deploy-client/internal/genaccounts` | 大勇 |
 | 2026-09-07 | [gen-cross-tx-config target 不可重复](specs/2026-09-07-gen-cross-tx-config-unique-targets-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go` | 大勇 |
 | 2026-09-08 | [gen-cross-tx-config 分池目标与 wallet_amount 默认值](specs/2026-09-08-gen-cross-tx-config-typed-targets-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go` | 大勇 |
+| 2026-09-08 | [bench-cross-tx 未打包上限 max_unconfirmed](specs/2026-09-08-bench-cross-tx-receipt-wait-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go`、`zk-claim-service/scripts/7r_multisend.js`、`zk-claim-service/scripts/lib/benchSendPolicy.js` | 大勇 |
 | 2026-09-08 | [deploy-client sample-wallets 抽查确定性账户余额](specs/2026-09-08-deploy-client-sample-wallets-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets`、`ydyl-deploy-client/internal/utils/cryptoutil` | 大勇 |
 
 ## Plans
@@ -49,4 +50,5 @@
 - 2026-09-07 远端 gen-accounts 命令复用 2026-05-07 / `gen-cross-tx-config` 的 XJST node-1 选机规则（`PickChainEntries`），不改变流水线 step9
 - 2026-09-07 `gen-cross-tx-config` unique-targets 只改 `GenerateJobs` 的目标分配，不改 `PickChainEntries`，不影响远端 gen-accounts 选机
 - 2026-09-08 typed-targets 覆盖 unique-targets 的配对范围：xjst 只打 xjst，op/cdk 只打 op/cdk；n=1 允许自指；池内 n≥2 仍 derangement；`--wallet-amount` 默认 10
+- 2026-09-08 bench receipt-wait 覆盖 unique-targets / typed-targets 中「xjst 源 `WaitForReceipts=false`」：所有源链默认 `wait_for_receipts=true`，未打包上限 `max_unconfirmed`（默认 1000）由 CLI 写入 job 字段；跨 round 累计，满 N 才查 receipt 补发额度
 - 2026-09-08 `sample-wallets` 复用 `PickChainEntries`（不改选机规则）与确定性私钥公式；不改 `gen-private-key`
