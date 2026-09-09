@@ -28,6 +28,8 @@
 | 2026-09-08 | [gen-cross-tx-config 分池目标与 wallet_amount 默认值](specs/2026-09-08-gen-cross-tx-config-typed-targets-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go` | 大勇 |
 | 2026-09-08 | [bench-cross-tx 未打包上限 max_unconfirmed](specs/2026-09-08-bench-cross-tx-receipt-wait-spec.md) | — | `ydyl-deploy-client/internal/crosstxconfig`、`ydyl-deploy-client/cmd/gen_cross_tx_config.go`、`zk-claim-service/scripts/7r_multisend.js`、`zk-claim-service/scripts/lib/benchSendPolicy.js` | 大勇 |
 | 2026-09-08 | [deploy-client sample-wallets 抽查确定性账户余额](specs/2026-09-08-deploy-client-sample-wallets-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets`、`ydyl-deploy-client/internal/utils/cryptoutil` | 大勇 |
+| 2026-09-09 | [deploy-client gen-private-key 支持 Core Space CIP-37](specs/2026-09-09-deploy-client-gen-private-key-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/gen_private_key.go`、`ydyl-deploy-client/internal/utils/cryptoutil` | 大勇 |
+| 2026-09-09 | [gen:contract DEBUG 打印余额与 CIP-37](specs/2026-09-09-gen-accounts-debug-balance-base32-spec.md) | — | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/coreSpaceAddress.ts` | 大勇 |
 
 ## Plans
 
@@ -37,6 +39,8 @@
 | 2026-09-04 | [`ydyl-gen-accounts` Core Space 支持实施计划](plans/2026-09-04-gen-accounts-core-space-support-plan.md) | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | 已完成 |
 | 2026-09-04 | [`ydyl-gen-accounts` Core BatchSender 单合约部署实施计划](plans/2026-09-04-gen-accounts-core-space-batch-sender-deploy-plan.md) | [`ydyl-gen-accounts` 支持 Conflux Core Space](specs/2026-09-03-gen-accounts-core-space-support-spec.md) | 已完成 |
 | 2026-09-08 | [sample-wallets 抽查确定性账户余额实施计划](plans/2026-09-08-deploy-client-sample-wallets-plan.md) | [deploy-client sample-wallets 抽查确定性账户余额](specs/2026-09-08-deploy-client-sample-wallets-spec.md) | 已完成 |
+| 2026-09-09 | [gen-private-key l2type=3 CIP-37 实施计划](plans/2026-09-09-deploy-client-gen-private-key-l2type3-plan.md) | [deploy-client gen-private-key 支持 Core Space CIP-37](specs/2026-09-09-deploy-client-gen-private-key-l2type3-spec.md) | 已完成 |
+| 2026-09-09 | [gen:contract DEBUG 打印 balance 与 CIP-37 实施计划](plans/2026-09-09-gen-accounts-debug-balance-base32-plan.md) | [gen:contract DEBUG 打印余额与 CIP-37](specs/2026-09-09-gen-accounts-debug-balance-base32-spec.md) | 已完成 |
 
 ---
 
@@ -51,4 +55,6 @@
 - 2026-09-07 `gen-cross-tx-config` unique-targets 只改 `GenerateJobs` 的目标分配，不改 `PickChainEntries`，不影响远端 gen-accounts 选机
 - 2026-09-08 typed-targets 覆盖 unique-targets 的配对范围：xjst 只打 xjst，op/cdk 只打 op/cdk；n=1 允许自指；池内 n≥2 仍 derangement；`--wallet-amount` 默认 100，`--tx-amount-per-wallet` 默认 10000
 - 2026-09-08 bench receipt-wait 覆盖 unique-targets / typed-targets 中「xjst 源 `WaitForReceipts=false`」：所有源链默认 `wait_for_receipts=true`，未打包上限 `max_unconfirmed`（默认 1000）由 CLI 写入 job 字段；跨 round 累计，满 N 才查 receipt 补发额度
-- 2026-09-08 `sample-wallets` 复用 `PickChainEntries`（不改选机规则）与确定性私钥公式；不改 `gen-private-key`
+- 2026-09-08 `sample-wallets` 复用 `PickChainEntries`（不改选机规则）与确定性私钥公式；该 feature 范围内不改 `gen-private-key`
+- 2026-09-09 `gen-private-key` 补回命令并支持 `l2type=3` CIP-37；不改 `sample-wallets`，不改 `ydyl-gen-accounts` 的 `0x` CLI 约定
+- 2026-09-09 gen:contract DEBUG 余额/CIP-37 补充 2026-09-03：`0x` CLI/进度约定不变，仅 DEBUG 日志额外打印 verbose CIP-37 与发交易前余额
