@@ -15,7 +15,7 @@
 ## 非目标
 
 - 不合并 `start` / `resume`
-- 不实现 README 中尚未存在的 `monitor-gen-accounts`
+- 不实现 README 中尚未存在的 `monitor-gen-accounts`（该命令已于后续单独实现；本条非目标不阻止后续监控命令，见 [2026-09-09 by-type spec](2026-09-09-deploy-client-monitor-gen-accounts-by-type-spec.md)）
 - 不改流水线 step9，不改 `ydyl-gen-accounts/package.json`
 - 不在远端重新部署合约或改写 `.env`
 

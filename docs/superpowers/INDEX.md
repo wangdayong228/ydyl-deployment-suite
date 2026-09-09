@@ -30,6 +30,7 @@
 | 2026-09-08 | [deploy-client sample-wallets 抽查确定性账户余额](specs/2026-09-08-deploy-client-sample-wallets-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets`、`ydyl-deploy-client/internal/utils/cryptoutil` | 大勇 |
 | 2026-09-09 | [deploy-client gen-private-key 支持 Core Space CIP-37](specs/2026-09-09-deploy-client-gen-private-key-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/gen_private_key.go`、`ydyl-deploy-client/internal/utils/cryptoutil` | 大勇 |
 | 2026-09-09 | [gen:contract DEBUG 打印余额与 CIP-37](specs/2026-09-09-gen-accounts-debug-balance-base32-spec.md) | — | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/coreSpaceAddress.ts` | 大勇 |
+| 2026-09-09 | [deploy-client monitor-gen-accounts 按链类型汇总](specs/2026-09-09-deploy-client-monitor-gen-accounts-by-type-spec.md) | 4.1.32 | `ydyl-deploy-client/internal/genaccmonitor`、`ydyl-deploy-client/cmd/monitor_gen_accounts.go` | 大勇 |
 
 ## Plans
 
@@ -58,3 +59,4 @@
 - 2026-09-08 `sample-wallets` 复用 `PickChainEntries`（不改选机规则）与确定性私钥公式；该 feature 范围内不改 `gen-private-key`
 - 2026-09-09 `gen-private-key` 补回命令并支持 `l2type=3` CIP-37；不改 `sample-wallets`，不改 `ydyl-gen-accounts` 的 `0x` CLI 约定
 - 2026-09-09 gen:contract DEBUG 余额/CIP-37 补充 2026-09-03：`0x` CLI/进度约定不变，仅 DEBUG 日志额外打印 verbose CIP-37 与发交易前余额
+- 2026-09-09 `monitor-gen-accounts` 按链类型汇总复用 `PickChainEntries`（先丢掉 `generic` 再选机）；不改 2026-09-07 `gen-accounts start/stop/resume`；XJST 一条链只计组内 node-1
