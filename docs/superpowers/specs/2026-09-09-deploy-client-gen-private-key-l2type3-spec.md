@@ -22,7 +22,7 @@ Conflux Core Space（`l2type=3`）的 `cfx_getBalance` 等 JSON-RPC 要求 CIP-3
 
 ## 非目标
 
-- 不改 `sample-wallets`（仍不支持 `l2type=3`）
+- 本命令不改 `sample-wallets` 的选链逻辑；`sample-wallets` 的 `l2type=3` 见 [2026-09-10 sample-wallets l2type3 spec](2026-09-10-deploy-client-sample-wallets-l2type3-spec.md)，地址编码仍由 `CoreBase32AddressFromPrivateKey` 提供
 - `AddressFromPrivateKey` 继续只服务 `0/1/2`，继续拒绝 `l2type=3`
 - 不改 `ydyl-gen-accounts`（那边 CLI/进度文件仍用 `0x`）
 - 不改 `ydyl-console-service` 的 `L2Type` 枚举

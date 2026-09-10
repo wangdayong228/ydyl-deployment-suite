@@ -7,26 +7,27 @@
 ## 目标
 
 - 新命令：`ydyl-deploy-client sample-wallets`
-- 必填 `--l2type`（`0=cdk` / `1=op` / `2=xjst`）
+- 必填 `--l2type`（`0=cdk` / `1=op` / `2=xjst`；`3=core` 见 [2026-09-10 l2type3 spec](2026-09-10-deploy-client-sample-wallets-l2type3-spec.md)）
 - 读取 `--servers`（默认 `./output/servers.json`）
 - 复用 `PickChainEntries` 选机规则，再按 l2type 过滤，用 `crypto/rand` **随机挑 1 条**该类型链
-- 从该节点 `ydyl-console-service` 取 `L2_RPC_URL`；EVM 的 `chainID` 取 `L2_CHAIN_ID`；XJST 的 `groupID` 从机器名解析
+- 从该节点 `ydyl-console-service` 取 `L2_RPC_URL`（可被 `--rpc-url` 覆盖，见 [2026-09-10 spec](2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md)）；EVM 的 `chainID` 取 `L2_CHAIN_ID`；XJST 的 `groupID` 从机器名解析
 - 在 `[0, max-index)` 抽取 **10** 个不重复 index（`--max-index` 默认 `1000000`，可配如 `20000000`）
 - 用现有 `BuildDeterministicPrivateKey` 生成私钥，按 l2type 派生地址，查询余额并打印
 
 ## 非目标
 
 - 不修改现有 `gen-private-key` 行为，本次不补缺失的 `cmd/gen_private_key.go`
-- 不支持 `l2type=3`（Core Space）
-- 不提供 `--rpc-url` / `--chainID` / `--groupID` / `--index` / `--count` / `--config`
+- `l2type=3` 由 [2026-09-10 l2type3 spec](2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) 定义（必填 `--rpc-url` + `--chainID`，跳过 servers/console-service）
+- 不提供 `--groupID` / `--index` / `--count` / `--config`；`--chainID` 仅 `l2type=3` 使用
+- `--rpc-url` 由 [2026-09-10 spec](2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) 定义为可选覆盖，本 spec 不再禁止
 - 不充值、不写输出文件、不 SSH
 - 不改变 `PickChainEntries` 选机规则
 
 ## 方案选择
 
-采用独立命令 + console-service 发现 RPC/chainID，复用 `PickChainEntries`。
+采用独立命令 + console-service 发现 RPC/chainID，复用 `PickChainEntries`。可选 `--rpc-url` 只覆盖查余额用的 RPC，不跳过选链与 summary。
 
-不采用：手填 RPC、按约定端口拼接 RPC、SSH 到远端跑 TypeScript 查余额。
+不采用：必填 `--rpc-url`、按约定端口拼接 RPC、SSH 到远端跑 TypeScript 查余额、因 `--rpc-url` 跳过 `servers.json`/console-service。
 
 ## CLI
 
@@ -34,13 +35,15 @@
 cd ydyl-deploy-client
 go run . sample-wallets --l2type 1
 go run . sample-wallets --servers ./output/servers.json --l2type 2 --max-index 20000000
+go run . sample-wallets --l2type 1 --rpc-url http://10.0.0.1/l2rpc
 ```
 
 | Flag | 默认 | 规则 |
 |------|------|------|
-| `--l2type` | 无 | 必填；`0`/`1`/`2`。Cobra 必须要求显式出现该 flag，以便 `--l2type 0` 合法、省略时报错 |
+| `--l2type` | 无 | 必填；`0`/`1`/`2`（`3` 见 l2type3 spec）。Cobra 必须要求显式出现该 flag，以便 `--l2type 0` 合法、省略时报错 |
 | `--servers` | `./output/servers.json` | `servers.json` 路径 |
 | `--max-index` | `1000000` | 必须 `>= 10`；抽样区间 `[0, max-index)`，不含上限 |
+| `--rpc-url` | 空 | 可选。`TrimSpace` 后非空则原样作为查余额 RPC，不改写；空或纯空白走 summary 改写规则。详见 [2026-09-10 spec](2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) |
 
 抽样个数固定为 **10**，不是 flag。
 
@@ -50,7 +53,7 @@ go run . sample-wallets --servers ./output/servers.json --l2type 2 --max-index 2
 2. 按 l2type 映射过滤：`0→cdk`，`1→op`，`2→xjst`。过滤后为空则失败。
 3. 用 `crypto/rand` 在过滤结果中选 1 条。
 4. 只请求该 IP 的 `GET /v1/result/pipeline/summary`（`http://<ip>:8080`），不拉 contracts。
-5. L2 RPC = `ReplaceLocalhostWithIP(summary.L2_RPC_URL, ip)`（导出 crosstxconfig 现有改写函数，行为不变）。空 RPC 失败。
+5. L2 RPC：若 `--rpc-url` 经 `TrimSpace` 后非空，原样使用且**不**做 `ReplaceLocalhostWithIP`；否则 `ReplaceLocalhostWithIP(summary.L2_RPC_URL, ip)`（导出 crosstxconfig 现有改写函数，行为不变）。未覆盖且改写后为空则失败。覆盖时允许 summary 的 `L2_RPC_URL` 为空。
 6. `l2type=0/1`：解析 `summary.L2_CHAIN_ID` 为十进制 `uint64`，缺失或非法则失败。该值用于私钥派生。
 7. `l2type=2`：从 name（`tagPrefix-xjst-groupId-index`）解析 `groupID`（正整数），用于私钥派生。不使用 `L2_CHAIN_ID` 派生私钥。name 非法则失败。
 
@@ -86,7 +89,7 @@ go run . sample-wallets --servers ./output/servers.json --l2type 2 --max-index 2
 
 stdout 先打一行元数据，再打表（列：`index`、`privateKey`、`address`、`balanceWei`）。
 
-元数据字段：`name`、`l2type`、EVM 时 `chainID`、XJST 时 `groupID`、改写后的 L2 RPC。
+元数据字段：`name`、`l2type`、EVM 时 `chainID`、XJST 时 `groupID`、实际用于查余额的 L2 RPC（覆盖值或改写后的 summary URL）。
 
 `balanceWei` 为十进制整数（wei/drip）。不写文件。
 
@@ -100,7 +103,7 @@ stdout 先打一行元数据，再打表（列：`index`、`privateKey`、`addre
 - `PickChainEntries` 失败
 - 过滤后无匹配链
 - console-service 失败
-- summary 缺少可用 `L2_RPC_URL`；EVM 缺少合法 `L2_CHAIN_ID`
+- 未覆盖 `--rpc-url` 时 summary 缺少可用 `L2_RPC_URL`；EVM 缺少合法 `L2_CHAIN_ID`
 - XJST name 无法解析 `groupID`
 - 抽不满 10 个合法 index
 - 任一余额 RPC 失败
@@ -114,7 +117,7 @@ stdout 先打一行元数据，再打表（列：`index`、`privateKey`、`addre
 | `ydyl-deploy-client/internal/crosstxconfig/crosstxconfig.go` | 导出 `ReplaceLocalhostWithIP` |
 | `ydyl-deploy-client/internal/samplewallets/` | 选链、抽样、派生、查余额 |
 | `ydyl-deploy-client/cmd/sample_wallets.go` | Cobra 命令 |
-| `ydyl-deploy-client/cmd/sample_wallets_test.go` | flag 默认值与 `--l2type` 必填 |
+| `ydyl-deploy-client/cmd/sample_wallets_test.go` | flag 默认值、`--l2type` 必填、`--rpc-url` 默认空 |
 | `ydyl-deploy-client/README.md` | 新命令说明 |
 
 ## 用法注意

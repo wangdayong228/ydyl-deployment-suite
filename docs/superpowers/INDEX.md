@@ -31,6 +31,8 @@
 | 2026-09-09 | [deploy-client gen-private-key 支持 Core Space CIP-37](specs/2026-09-09-deploy-client-gen-private-key-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/gen_private_key.go`、`ydyl-deploy-client/internal/utils/cryptoutil` | 大勇 |
 | 2026-09-09 | [gen:contract DEBUG 打印余额与 CIP-37](specs/2026-09-09-gen-accounts-debug-balance-base32-spec.md) | — | `ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/coreSpaceAddress.ts` | 大勇 |
 | 2026-09-09 | [deploy-client monitor-gen-accounts 按链类型汇总](specs/2026-09-09-deploy-client-monitor-gen-accounts-by-type-spec.md) | 4.1.32 | `ydyl-deploy-client/internal/genaccmonitor`、`ydyl-deploy-client/cmd/monitor_gen_accounts.go` | 大勇 |
+| 2026-09-10 | [deploy-client sample-wallets 可选 --rpc-url](specs/2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
+| 2026-09-10 | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
 
 ## Plans
 
@@ -42,6 +44,8 @@
 | 2026-09-08 | [sample-wallets 抽查确定性账户余额实施计划](plans/2026-09-08-deploy-client-sample-wallets-plan.md) | [deploy-client sample-wallets 抽查确定性账户余额](specs/2026-09-08-deploy-client-sample-wallets-spec.md) | 已完成 |
 | 2026-09-09 | [gen-private-key l2type=3 CIP-37 实施计划](plans/2026-09-09-deploy-client-gen-private-key-l2type3-plan.md) | [deploy-client gen-private-key 支持 Core Space CIP-37](specs/2026-09-09-deploy-client-gen-private-key-l2type3-spec.md) | 已完成 |
 | 2026-09-09 | [gen:contract DEBUG 打印 balance 与 CIP-37 实施计划](plans/2026-09-09-gen-accounts-debug-balance-base32-plan.md) | [gen:contract DEBUG 打印余额与 CIP-37](specs/2026-09-09-gen-accounts-debug-balance-base32-spec.md) | 已完成 |
+| 2026-09-10 | [sample-wallets 可选 --rpc-url 实施计划](plans/2026-09-10-deploy-client-sample-wallets-rpc-url-plan.md) | [deploy-client sample-wallets 可选 --rpc-url](specs/2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) | 已完成 |
+| 2026-09-10 | [sample-wallets 支持 l2type=3 实施计划](plans/2026-09-10-deploy-client-sample-wallets-l2type3-plan.md) | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | 已完成 |
 
 ---
 
@@ -57,6 +61,8 @@
 - 2026-09-08 typed-targets 覆盖 unique-targets 的配对范围：xjst 只打 xjst，op/cdk 只打 op/cdk；n=1 允许自指；池内 n≥2 仍 derangement；`--wallet-amount` 默认 100，`--tx-amount-per-wallet` 默认 10000
 - 2026-09-08 bench receipt-wait 覆盖 unique-targets / typed-targets 中「xjst 源 `WaitForReceipts=false`」：所有源链默认 `wait_for_receipts=true`，未打包上限 `max_unconfirmed`（默认 1000）由 CLI 写入 job 字段；跨 round 累计，满 N 才查 receipt 补发额度
 - 2026-09-08 `sample-wallets` 复用 `PickChainEntries`（不改选机规则）与确定性私钥公式；该 feature 范围内不改 `gen-private-key`
-- 2026-09-09 `gen-private-key` 补回命令并支持 `l2type=3` CIP-37；不改 `sample-wallets`，不改 `ydyl-gen-accounts` 的 `0x` CLI 约定
+- 2026-09-10 `sample-wallets` 可选 `--rpc-url` 覆盖查余额 RPC，不改写用户 URL；空/空白仍走 summary + `ReplaceLocalhostWithIP`；不跳过选链与 console-service
+- 2026-09-09 `gen-private-key` 补回命令并支持 `l2type=3` CIP-37；地址编码由 `CoreBase32AddressFromPrivateKey` 提供；不改 `ydyl-gen-accounts` 的 `0x` CLI 约定
+- 2026-09-10 `sample-wallets` `l2type=3` 必填 `--rpc-url` 与 `--chainID`，跳过 servers/console-service，地址 CIP-37，余额 `cfx_getBalance`
 - 2026-09-09 gen:contract DEBUG 余额/CIP-37 补充 2026-09-03：`0x` CLI/进度约定不变，仅 DEBUG 日志额外打印 verbose CIP-37 与发交易前余额
 - 2026-09-09 `monitor-gen-accounts` 按链类型汇总复用 `PickChainEntries`（先丢掉 `generic` 再选机）；不改 2026-09-07 `gen-accounts start/stop/resume`；XJST 一条链只计组内 node-1
