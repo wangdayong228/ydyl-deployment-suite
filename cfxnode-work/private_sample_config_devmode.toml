@@ -3,8 +3,7 @@
 # A node is identified by cfxnode://NODEID@PUBLICIP:PORT
 # By default, no bootnodes are provided. What's provided here is a list of nodes that Conflux Team maintains across the world.
 
-# bootnodes="cfxnode://1d45510512bd676934a026b46545cca55d5f2b2776754f54ce859fa1960261e16758021b3691cc6c79e9e4d83d45ec0aaf7a98817d7d23f98312e17e1315ff15@16.148.64.138:32323,cfxnode://27d01999a91e199258dafac94f4279b24f9e6abe02d774624b81c3dba06bde1650dd178a0556a4081bc5325e3d03019cb42b4d448f441942299d4cd32bbdd728@52.12.11.65:32323,cfxnode://88c054daec1f51984448ea4bccc30947655889f41048c4fb5ac0c8836531b743cd16bc0f929f7a1c10947c51692d9705bb551e6faa73d1a8649d329aab7907dd@34.219.245.189:32323"
-net_key="5eb4a446ecc5cba5ebfdb295f2d60e7fd2eecd5b155207da91f46c17e87a7f41"
+#net_key="5eb4a446ecc5cba5ebfdb295f2d60e7fd2eecd5b155207da91f46c17e87a7f41"
 
 # Set the node type to Full node, Archive node, or Light node.
 # Possible values are "full", "archive", or "light".
@@ -34,12 +33,12 @@ node_type = "archive"
 #       in fixed period, see ``dev_block_interval_ms'')
 #     * Skip catch-up mode even there is no peer
 #
-mode = "dev"
+# mode = ""
 
 # If you want to setup a single node running Conflux for development. You should
 # COMMENT the bootnodes setting and you should use the following parameters:
 #
-# mode = "dev"
+mode = "dev"
 
 # ``dev_block_interval_ms'' controls the mining rate in the dev mode.
 #
@@ -63,8 +62,8 @@ dev_block_interval_ms = 1000
 # The default value is "stratum" if `mining_author` is set.
 # If the value is set and not "disable", `mining_author` must be set.
 #
-mining_type = "cpu"
-# mining_author = "0x19619a70899B445859Fc86120CD9Ff74e6252A2D"
+# mining_type = "cpu"
+mining_author = "0x19619a70899B445859Fc86120CD9Ff74e6252A2D"
 
 # Listen address for stratum
 #
@@ -151,7 +150,7 @@ log_conf="log.yaml"
 # Note that to serve transaction-related RPCs, `persist_tx_index` should also be set to `true` or
 # the node will only be able to handle very recent transactions.
 #
-# jsonrpc_ws_port=12535
+jsonrpc_ws_port=12535
 # jsonrpc_tcp_port=12536
 jsonrpc_http_port=12537
 # jsonrpc_local_tcp_port=12538
@@ -505,6 +504,7 @@ tx_pool_min_eth_tx_gas_price = 1
 #
 # storage_max_open_mpt_count = 4
 
+
 # Configure if we strictly check the tx index before garbage collection.
 # Setting it to `false` will improve the performance. But if the value is `false`, it's possible that although the
 # epoch where a tx is executed should not be garbage collected, the tx index of this tx is removed because it's packed
@@ -588,8 +588,8 @@ get_logs_filter_max_limit = 5000
 # 1 for testnet
 # 1029 for Mainnet (Hydra)
 #
-chain_id = 7654
-evm_chain_id = 7655
+chain_id = 1024
+evm_chain_id = 1025
 
 # The EVM chain ID of Conflux Network (EVM space)
 # 1030 for Mainnet (Hydra)
@@ -639,8 +639,8 @@ evm_transaction_gas_ratio=1
 max_packing_batch_size=10000
 max_packing_batch_gas_limit=7500000
 
-genesis_accounts = "./genesis_accounts.txt"
-dev_allow_phase_change_without_peer = true
+# genesis_accounts = "./genesis_accounts.txt"
+#dev_allow_phase_change_without_peer = true
 tx_pool_size=2000000
 max_block_size_in_bytes=1048576
 cip130_transition_height=100000000

@@ -4,8 +4,9 @@ services:
     build: .
     image: conflux/confura:latest
     command: nm --cfx
-    ports:
-      - 22530:22530
+    network_mode: host
+    #ports:
+      #- 22530:22530
     restart: unless-stopped
     depends_on:
       - influxdb
@@ -21,8 +22,9 @@ services:
   ethnode-management:
     image: conflux/confura:latest
     command: nm --eth
-    ports:
-      - 28530:28530
+    network_mode: host
+    #ports:
+      #- 28530:28530
     restart: unless-stopped
     depends_on:
       - influxdb
@@ -41,7 +43,7 @@ services:
     command: sync --db
     restart: unless-stopped
     depends_on:
-      - db
+      #- db
       - influxdb
     env_file:
       - path: .env
@@ -61,7 +63,7 @@ services:
     command: sync --eth
     restart: unless-stopped
     depends_on:
-      - db
+      #- db
       - influxdb
     env_file:
       - path: .env
@@ -80,11 +82,10 @@ services:
   virtual-filter:
     image: conflux/confura:latest
     command: vf --cfx
-    #ports:
-      #- "42537:42537"
+    ports:
+      - "42537:42537"
     restart: unless-stopped
     depends_on:
-      - db
       - influxdb
     env_file:
       - path: .env
@@ -100,11 +101,10 @@ services:
   ethvirtual-filter:
     image: conflux/confura:latest
     command: vf --eth
-    #ports:
-      #- "48545:48545"
+    ports:
+      - "48545:48545"
     restart: unless-stopped
     depends_on:
-      - db
       - influxdb
     env_file:
       - path: .env
@@ -121,11 +121,11 @@ services:
   rpc-proxy:
     image: conflux/confura:latest
     command: rpc --cfx
-    ports:
-      - "22537:22537"
+    network_mode: host
+    #ports:
+      #- "22537:22537"
     restart: unless-stopped
     depends_on:
-      - db
       - influxdb
       - node-management
       - virtual-filter
@@ -136,6 +136,7 @@ services:
       - INFURA_STORE_MYSQL_ENABLED=true
       - INFURA_STORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_cfx?parseTime=true
       - INFURA_NODE_ROUTER_NODERPCURL=http://node-management:22530
+      - INFURA_NODE_ROUTER_NODERPCURLPROTO=node-management:22531
       - INFURA_VIRTUALFILTERS_CLIENT_ENABLED=true
       - INFURA_VIRTUALFILTERS_CLIENT_SERVICERPCURL=http://virtual-filter:42537
       - INFURA_METRICS_ENABLED=true
@@ -146,12 +147,13 @@ services:
   ethrpc-proxy:
     image: conflux/confura:latest
     command: rpc --eth
-    ports:
-      - "28545:28545"
-      - "28535:28535"
+    network_mode: host
+    #ports:
+      #- "28545:28545"
+      #- "28535:28535"
     restart: unless-stopped
     depends_on:
-      - db
+      #- db
       - influxdb
       - ethnode-management
       - ethvirtual-filter
@@ -162,6 +164,7 @@ services:
       - INFURA_ETHSTORE_MYSQL_ENABLED=true
       - INFURA_ETHSTORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_eth?parseTime=true
       - INFURA_NODE_ROUTER_ETHNODERPCURL=http://ethnode-management:28530
+      - INFURA_NODE_ROUTER_ETHNODERPCURLPROTO=ethnode-management:28531
       - INFURA_ETHVIRTUALFILTERS_CLIENT_ENABLED=true
       - INFURA_ETHVIRTUALFILTERS_CLIENT_SERVICERPCURL=http://ethvirtual-filter:48545
       - INFURA_METRICS_ENABLED=true
@@ -172,8 +175,9 @@ services:
   cfxbridge:
     image: conflux/confura:latest
     command: rpc --cfxBridge
-    ports:
-      - "32537:32537"
+    network_mode: host
+    #ports:
+      #- "32537:32537"
     restart: unless-stopped
     env_file:
       - path: .env
@@ -181,20 +185,6 @@ services:
     container_name: confura-cfxbridge
 
   # middlewares
-  db:
-    image: mysql:8
-    ports:
-      - "3306"
-    restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      - MYSQL_ROOT_PASSWORD=root
-    volumes:
-      - db-data:/var/lib/mysql
-    container_name: confura-database
-
   influxdb:
     image: influxdb:1.8-alpine
     platform: linux/amd64
@@ -213,8 +203,9 @@ services:
   grafana:
     image: grafana/grafana:11.2.2
     platform: linux/amd64
-    ports:
-      - "3000:3000"
+    network_mode: host
+    #ports:
+      #- "3000:3000"
     restart: unless-stopped
     env_file:
       - path: .env
