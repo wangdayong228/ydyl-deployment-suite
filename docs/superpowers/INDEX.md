@@ -35,6 +35,7 @@
 | 2026-09-10 | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
 | 2026-09-10 | [bench-cross-tx tps 汇总写入 TOTALTPS.json](specs/2026-09-10-bench-cross-tx-tps-summary-spec.md) | — | `zk-claim-service/scripts/lib/tpsSummary.js`、`zk-claim-service/scripts/h_L2TPSCalulation.js`、`zk-claim-service/scripts/h_TPSjob.js`、`ydyl-deploy-client/README.md` | 大勇 |
 | 2026-09-10 | [gen:contract `--retryUntilSuccess`](specs/2026-09-10-gen-accounts-retry-until-success-spec.md) | — | `ydyl-gen-accounts/scripts/byContractSend.ts`、`ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/3_concurrency.ts`、`cdk_pipe.sh` | 大勇 |
+| 2026-09-10 | [TPS getLogs too-many-logs 递归折半](specs/2026-09-10-tps-getlogs-too-many-logs-spec.md) | — | `zk-claim-service/scripts/lib/getLogsPaginated.js`、`zk-claim-service/scripts/h_L2TPSCalulation.js`、`zk-claim-service/scripts/i_L1TPSCalulation.js` | 大勇 |
 
 ## Plans
 
@@ -72,3 +73,4 @@
 - 2026-09-09 `monitor-gen-accounts` 按链类型汇总复用 `PickChainEntries`（先丢掉 `generic` 再选机）；不改 2026-09-07 `gen-accounts start/stop/resume`；XJST 一条链只计组内 node-1
 - 2026-09-10 `tps` 汇总扩展既有 `TOTALTPS.json`（覆盖快照）：ISO 启动/当前时间、经历时长、链数量与每链 `wallet_amount`；启动时间取 `{hash}-l1.json` 最早 unix `start_timestamp`；不改编排、不改 `L1TOTALTPS.json`
 - 2026-09-10 gen:contract `--retryUntilSuccess` 默认不改变 2026-09-03 的失败/窗口/进度语义；CLI 默认关闭；`cdk_pipe.sh` 默认 `RETRY_UNTIL_SUCCESS=true`；回执重试按下标钉死最后一笔；提交遇 nonce 占用/`already known` 不得钉死原 nonce；不改 by-eoa / op_pipe / xjst_pipe / 远端 `gen-accounts start`
+- 2026-09-10 TPS getLogs 折半不改 `--block-range` 默认 300；lookback 与 getLogs 切分分离；`eth_getLogs` 与 xjst `cfx_getLogs` 同一套递归折半；eSpace 无建议区间的 too-many-logs 也要拆；不改 `g_L2eventmonitor.js`
