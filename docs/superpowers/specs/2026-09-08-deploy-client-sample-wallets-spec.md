@@ -11,7 +11,7 @@
 - 读取 `--servers`（默认 `./output/servers.json`）
 - 复用 `PickChainEntries` 选机规则，再按 l2type 过滤，用 `crypto/rand` **随机挑 1 条**该类型链
 - 从该节点 `ydyl-console-service` 取 `L2_RPC_URL`（可被 `--rpc-url` 覆盖，见 [2026-09-10 spec](2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md)）；EVM 的 `chainID` 取 `L2_CHAIN_ID`；XJST 的 `groupID` 从机器名解析
-- 在 `[0, max-index)` 抽取 **10** 个不重复 index（`--max-index` 默认 `1000000`，可配如 `20000000`）
+- 在 `[0, max-index)` 抽取 **10** 个不重复 index（`--max-index` 默认 `1000`，可配如 `20000000`）
 - 用现有 `BuildDeterministicPrivateKey` 生成私钥，按 l2type 派生地址，查询余额并打印
 
 ## 非目标
@@ -42,7 +42,7 @@ go run . sample-wallets --l2type 1 --rpc-url http://10.0.0.1/l2rpc
 |------|------|------|
 | `--l2type` | 无 | 必填；`0`/`1`/`2`（`3` 见 l2type3 spec）。Cobra 必须要求显式出现该 flag，以便 `--l2type 0` 合法、省略时报错 |
 | `--servers` | `./output/servers.json` | `servers.json` 路径 |
-| `--max-index` | `1000000` | 必须 `>= 10`；抽样区间 `[0, max-index)`，不含上限 |
+| `--max-index` | `1000` | 必须 `>= 10`；抽样区间 `[0, max-index)`，不含上限 |
 | `--rpc-url` | 空 | 可选。`TrimSpace` 后非空则原样作为查余额 RPC，不改写；空或纯空白走 summary 改写规则。详见 [2026-09-10 spec](2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) |
 
 抽样个数固定为 **10**，不是 flag。
