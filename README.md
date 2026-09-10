@@ -299,6 +299,7 @@ make clean
 - `DEPLOY_RESULT_FILE`
 - `L2_VAULT_PRIVATE_KEY`
 - `DRYRUN`
+- `RETRY_UNTIL_SUCCESS`，默认 `true`：step9 gen-accounts 失败时卡住当前交易重试到成功；设 `false` 则保持 CLI 默认的跳过/停发
 
 ### XJST 必填补充
 

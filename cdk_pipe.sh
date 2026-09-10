@@ -21,6 +21,7 @@ set -Eueo pipefail
 #    - DEPLOY_RESULT_FILE: 部署产物路径（默认 $DIR/cdk-work/output/deploy-result-$NETWORK.json）
 #    - L2_VAULT_PRIVATE_KEY: L2 faucet/admin 私钥（默认从 DEPLOY_RESULT_FILE 解析）
 #    - USE_REAL_PROVER: 是否使用真实 verifier 并跳过 mock prover（默认 true；false 时启动 mock zkevm-prover）
+#    - RETRY_UNTIL_SUCCESS: step9 gen-accounts 失败时是否卡住当前交易重试到成功（默认 true；false 时保持 gen-accounts CLI 的跳过/停发）
 #
 # 3. 自动生成/推导（无需手动提供，除非想固定值复用）的变量：
 #    - KURTOSIS_L1_PREALLOCATED_MNEMONIC: step1 自动生成（kurtosis 预分配账户助记词）
@@ -78,6 +79,8 @@ init_network_vars() {
 
   L2_TYPE="${L2_TYPE:-0}"
   export L2_TYPE
+  RETRY_UNTIL_SUCCESS="${RETRY_UNTIL_SUCCESS:-true}"
+  export RETRY_UNTIL_SUCCESS
 }
 
 generate_cdk_fund_vault_address() {

@@ -34,6 +34,7 @@
 | 2026-09-10 | [deploy-client sample-wallets 可选 --rpc-url](specs/2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
 | 2026-09-10 | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
 | 2026-09-10 | [bench-cross-tx tps 汇总写入 TOTALTPS.json](specs/2026-09-10-bench-cross-tx-tps-summary-spec.md) | — | `zk-claim-service/scripts/lib/tpsSummary.js`、`zk-claim-service/scripts/h_L2TPSCalulation.js`、`zk-claim-service/scripts/h_TPSjob.js`、`ydyl-deploy-client/README.md` | 大勇 |
+| 2026-09-10 | [gen:contract `--retryUntilSuccess`](specs/2026-09-10-gen-accounts-retry-until-success-spec.md) | — | `ydyl-gen-accounts/scripts/byContractSend.ts`、`ydyl-gen-accounts/scripts/2_genAccsByContract.ts`、`ydyl-gen-accounts/scripts/3_concurrency.ts`、`cdk_pipe.sh` | 大勇 |
 
 ## Plans
 
@@ -48,6 +49,7 @@
 | 2026-09-10 | [sample-wallets 可选 --rpc-url 实施计划](plans/2026-09-10-deploy-client-sample-wallets-rpc-url-plan.md) | [deploy-client sample-wallets 可选 --rpc-url](specs/2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) | 已完成 |
 | 2026-09-10 | [sample-wallets 支持 l2type=3 实施计划](plans/2026-09-10-deploy-client-sample-wallets-l2type3-plan.md) | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | 已完成 |
 | 2026-09-10 | [tps 汇总写入 TOTALTPS.json 实施计划](plans/2026-09-10-bench-cross-tx-tps-summary-plan.md) | [bench-cross-tx tps 汇总写入 TOTALTPS.json](specs/2026-09-10-bench-cross-tx-tps-summary-spec.md) | 已完成 |
+| 2026-09-10 | [gen:contract `--retryUntilSuccess` 实施计划](plans/2026-09-10-gen-accounts-retry-until-success-plan.md) | [gen:contract `--retryUntilSuccess`](specs/2026-09-10-gen-accounts-retry-until-success-spec.md) | 已完成 |
 
 ---
 
@@ -69,3 +71,4 @@
 - 2026-09-09 gen:contract DEBUG 余额/CIP-37 补充 2026-09-03：`0x` CLI/进度约定不变，仅 DEBUG 日志额外打印 verbose CIP-37 与发交易前余额
 - 2026-09-09 `monitor-gen-accounts` 按链类型汇总复用 `PickChainEntries`（先丢掉 `generic` 再选机）；不改 2026-09-07 `gen-accounts start/stop/resume`；XJST 一条链只计组内 node-1
 - 2026-09-10 `tps` 汇总扩展既有 `TOTALTPS.json`（覆盖快照）：ISO 启动/当前时间、经历时长、链数量与每链 `wallet_amount`；启动时间取 `{hash}-l1.json` 最早 unix `start_timestamp`；不改编排、不改 `L1TOTALTPS.json`
+- 2026-09-10 gen:contract `--retryUntilSuccess` 默认不改变 2026-09-03 的失败/窗口/进度语义；CLI 默认关闭；`cdk_pipe.sh` 默认 `RETRY_UNTIL_SUCCESS=true`；回执重试按下标钉死最后一笔；提交遇 nonce 占用/`already known` 不得钉死原 nonce；不改 by-eoa / op_pipe / xjst_pipe / 远端 `gen-accounts start`
