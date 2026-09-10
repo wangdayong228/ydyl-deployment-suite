@@ -42,7 +42,7 @@ go run . sample-wallets --l2type 3 --chainID 7654 --rpc-url http://52.12.7.189/c
 | `--rpc-url` | 空 | `l2type=3` 时 `TrimSpace` 后必须非空，原样使用。`0/1/2` 仍为可选覆盖 |
 | `--chainID` | `0` | 仅 `l2type=3` 使用，必须 `>=1`。`0/1/2` 忽略 |
 | `--servers` | `./output/servers.json` | `l2type=3` 忽略 |
-| `--max-index` | `1000` | 仍必须 `>= 10` |
+| `--max-index` | `1000000` | 仍必须 `>= 10` |
 
 ## 解析（l2type=3）
 
