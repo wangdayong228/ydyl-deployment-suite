@@ -33,6 +33,7 @@
 | 2026-09-09 | [deploy-client monitor-gen-accounts 按链类型汇总](specs/2026-09-09-deploy-client-monitor-gen-accounts-by-type-spec.md) | 4.1.32 | `ydyl-deploy-client/internal/genaccmonitor`、`ydyl-deploy-client/cmd/monitor_gen_accounts.go` | 大勇 |
 | 2026-09-10 | [deploy-client sample-wallets 可选 --rpc-url](specs/2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
 | 2026-09-10 | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | — | `ydyl-deploy-client/cmd/sample_wallets.go`、`ydyl-deploy-client/internal/samplewallets` | 大勇 |
+| 2026-09-10 | [bench-cross-tx tps 汇总写入 TOTALTPS.json](specs/2026-09-10-bench-cross-tx-tps-summary-spec.md) | — | `zk-claim-service/scripts/lib/tpsSummary.js`、`zk-claim-service/scripts/h_L2TPSCalulation.js`、`zk-claim-service/scripts/h_TPSjob.js`、`ydyl-deploy-client/README.md` | 大勇 |
 
 ## Plans
 
@@ -46,6 +47,7 @@
 | 2026-09-09 | [gen:contract DEBUG 打印 balance 与 CIP-37 实施计划](plans/2026-09-09-gen-accounts-debug-balance-base32-plan.md) | [gen:contract DEBUG 打印余额与 CIP-37](specs/2026-09-09-gen-accounts-debug-balance-base32-spec.md) | 已完成 |
 | 2026-09-10 | [sample-wallets 可选 --rpc-url 实施计划](plans/2026-09-10-deploy-client-sample-wallets-rpc-url-plan.md) | [deploy-client sample-wallets 可选 --rpc-url](specs/2026-09-10-deploy-client-sample-wallets-rpc-url-spec.md) | 已完成 |
 | 2026-09-10 | [sample-wallets 支持 l2type=3 实施计划](plans/2026-09-10-deploy-client-sample-wallets-l2type3-plan.md) | [deploy-client sample-wallets 支持 l2type=3 CIP-37](specs/2026-09-10-deploy-client-sample-wallets-l2type3-spec.md) | 已完成 |
+| 2026-09-10 | [tps 汇总写入 TOTALTPS.json 实施计划](plans/2026-09-10-bench-cross-tx-tps-summary-plan.md) | [bench-cross-tx tps 汇总写入 TOTALTPS.json](specs/2026-09-10-bench-cross-tx-tps-summary-spec.md) | 已完成 |
 
 ---
 
@@ -66,3 +68,4 @@
 - 2026-09-10 `sample-wallets` `l2type=3` 必填 `--rpc-url` 与 `--chainID`，跳过 servers/console-service，地址 CIP-37，余额 `cfx_getBalance`
 - 2026-09-09 gen:contract DEBUG 余额/CIP-37 补充 2026-09-03：`0x` CLI/进度约定不变，仅 DEBUG 日志额外打印 verbose CIP-37 与发交易前余额
 - 2026-09-09 `monitor-gen-accounts` 按链类型汇总复用 `PickChainEntries`（先丢掉 `generic` 再选机）；不改 2026-09-07 `gen-accounts start/stop/resume`；XJST 一条链只计组内 node-1
+- 2026-09-10 `tps` 汇总扩展既有 `TOTALTPS.json`（覆盖快照）：ISO 启动/当前时间、经历时长、链数量与每链 `wallet_amount`；启动时间取 `{hash}-l1.json` 最早 unix `start_timestamp`；不改编排、不改 `L1TOTALTPS.json`
