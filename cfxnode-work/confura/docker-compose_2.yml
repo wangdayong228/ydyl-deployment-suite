@@ -1,0 +1,131 @@
+services:
+  # virtual filter
+  virtual-filter:
+    image: conflux/confura:latest
+    command: vf --cfx
+    ports:
+      - "42537:42537"
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INFURA_STORE_MYSQL_ENABLED=true
+      - INFURA_STORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_cfx?parseTime=true
+      - INFURA_METRICS_ENABLED=true
+      - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
+      - INFURA_METRICS_INFLUXDB_DB=confura_testnet
+    container_name: confura-virtual-filter
+
+  ethvirtual-filter:
+    image: conflux/confura:latest
+    command: vf --eth
+    ports:
+      - "48545:48545"
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INFURA_ETHSTORE_MYSQL_ENABLED=true
+      - INFURA_ETHSTORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_eth?parseTime=true
+      - INFURA_METRICS_ENABLED=true
+      - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
+      - INFURA_METRICS_INFLUXDB_DB=confura_testnet
+    container_name: confura-ethvirtual-filter
+
+  # rpc proxy
+  rpc-proxy:
+    image: conflux/confura:latest
+    command: rpc --cfx
+    network_mode: host
+    #ports:
+      #- "22537:22537"
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+      - virtual-filter
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INFURA_STORE_MYSQL_ENABLED=true
+      - INFURA_STORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_cfx?parseTime=true
+      - INFURA_NODE_ROUTER_NODERPCURL=http://node-management:22530
+      - INFURA_NODE_ROUTER_NODERPCURLPROTO=node-management:22531
+      - INFURA_VIRTUALFILTERS_CLIENT_ENABLED=true
+      - INFURA_VIRTUALFILTERS_CLIENT_SERVICERPCURL=http://virtual-filter:42537
+      - INFURA_METRICS_ENABLED=true
+      - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
+      - INFURA_METRICS_INFLUXDB_DB=confura_testnet
+    container_name: confura-rpc
+
+  ethrpc-proxy:
+    image: conflux/confura:latest
+    command: rpc --eth
+    network_mode: host
+    #ports:
+      #- "28545:28545"
+      #- "28535:28535"
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+      - ethvirtual-filter
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INFURA_ETHSTORE_MYSQL_ENABLED=true
+      - INFURA_ETHSTORE_MYSQL_DSN=root:lK#JS*kasf^Slfsa91ls@tcp(yidaiyilu-l2-tps.cf6u25jowbqi.us-west-2.rds.amazonaws.com:3306)/confura_eth?parseTime=true
+      - INFURA_NODE_ROUTER_ETHNODERPCURL=http://ethnode-management:28530
+      - INFURA_NODE_ROUTER_ETHNODERPCURLPROTO=ethnode-management:28531
+      - INFURA_ETHVIRTUALFILTERS_CLIENT_ENABLED=true
+      - INFURA_ETHVIRTUALFILTERS_CLIENT_SERVICERPCURL=http://ethvirtual-filter:48545
+      - INFURA_METRICS_ENABLED=true
+      - INFURA_METRICS_INFLUXDB_HOST=http://influxdb:8086
+      - INFURA_METRICS_INFLUXDB_DB=confura_testnet
+    container_name: confura-ethrpc
+
+  # middlewares
+  influxdb:
+    image: influxdb:1.8-alpine
+    platform: linux/amd64
+    ports:
+      - "8086:8086"
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INFLUXDB_DB=confura_testnet
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    container_name: confura-influxdb
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    platform: linux/amd64
+    network_mode: host
+    #ports:
+      #- "3000:3000"
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    container_name: confura-grafana
+
+# others
+networks:
+  default:
+    name: confura-internal
+
+volumes:
+  db-data: {}
+  influxdb-data: {}
+  grafana-data: {}
