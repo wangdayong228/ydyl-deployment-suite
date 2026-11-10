@@ -14,7 +14,7 @@ set -x
 ########################################
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFURA_IP="52.12.7.189"
+CONFURA_IP="184.34.219.54"
 
 # 必须是 confura 所在机器，因为 .env_op 默认配置 JSONRPC_URL=http://127.0.0.1:28545
 echo "🛰️ [1/5] Start jsonrpc-proxy-op..."
